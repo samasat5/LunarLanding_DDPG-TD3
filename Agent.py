@@ -8,8 +8,10 @@ from tensordict.nn import TensorDictModule as Mod, TensorDictSequential as Seq
 from torchrl.envs.transforms import Compose
 
 
-# env = TransformedEnv(GymEnv("CartPole-v1"), Compose(StepCounter()))
-env = TransformedEnv(GymEnv("LunarLander-v3", render_mode="human"))
+
+env = (GymEnv("LunarLander-v3", render_mode="human"))
+time.sleep(10)
+episode = 0
 env.set_seed(0)
 obs, _ = env.reset()
 
@@ -18,7 +20,7 @@ while True:
     obs, reward, terminated, truncated, info = env.step(action)
     done = terminated or truncated
     print(obs)
-    time.sleep(2)
+    time.sleep(10)
     if done:
         episode += 1
         time.sleep(2)   
