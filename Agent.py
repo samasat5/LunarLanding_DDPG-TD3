@@ -9,7 +9,7 @@ from torchrl.envs.transforms import Compose
 
 
 
-env = (GymEnv("CartPole-v1"))
+env = GymEnv("LunarLander-v3", render_mode="human")
 # env = TransformedEnv(env, Compose(StepCounter()))
 # time.sleep(10)
 episode = 0
@@ -17,7 +17,7 @@ env.set_seed(0)
 obs, _ = env.reset()
 
 while True:
-    action = torch.tensor(env.action_space.sample())
+    action = env.action_space.sample()
     obs, reward, terminated, truncated, info = env.step(action)
     done = terminated or truncated
     print(obs)
