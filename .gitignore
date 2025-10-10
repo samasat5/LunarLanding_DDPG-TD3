@@ -1,0 +1,16 @@
+# Ignore virtual environments
+.RLproj/
+RLproj/
+env/
+venv/
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore VS Code settings (optional)
+.vscode/
+
+# Ignore temporary files
+.DS_Store
