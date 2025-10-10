@@ -1,6 +1,6 @@
 import gymnasium
 import numpy as np
-import pygame
+# import pygame
 import torch
 torch.manual_seed(0)
 import time
@@ -20,7 +20,7 @@ obs, _ = env.reset()
 while True:
     action = env.action_space.sample()
     obs, reward, terminated, truncated, info = env.step(action)
-    pygame.event.pump() 
+    # pygame.event.pump() 
     done = terminated or truncated
     print(obs)
     time.sleep(10)
