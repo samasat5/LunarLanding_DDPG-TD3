@@ -12,10 +12,9 @@ from torchrl.envs.transforms import Compose
 
 env = GymEnv("LunarLander-v3", render_mode="human")
 # env = TransformedEnv(env, Compose(StepCounter()))
-# time.sleep(10)
 episode = 0
 env.set_seed(0)
-obs, _ = env.reset()
+# obs, _ = env.reset()
 
 while True:
     action = env.action_space.sample()
