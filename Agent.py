@@ -15,11 +15,13 @@ obs, _ = env.reset()
 
 while True:
     action = torch.tensor(env.action_space.sample())
-    obs, reward, done, _, info = env.step(action)
+    obs, reward, terminated, truncated, info = env.step(action)
+    done = terminated or truncated
     print(obs)
-    time.sleep(1)
+    time.sleep(2)
     if done:
+        episode += 1
+        time.sleep(2)   
         obs, _ = env.reset()
-        # break
 
 
