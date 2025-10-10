@@ -5,11 +5,11 @@ torch.manual_seed(0)
 import time
 from torchrl.envs import GymEnv, StepCounter, TransformedEnv
 from tensordict.nn import TensorDictModule as Mod, TensorDictSequential as Seq
+from torchrl.envs.transforms import Compose
 
 
-
-# env = TransformedEnv(GymEnv("CartPole-v1"), [StepCounter()])
-env = TransformedEnv(GymEnv("LunarLander-v3"), [StepCounter()])
+# env = TransformedEnv(GymEnv("CartPole-v1"), Compose(StepCounter()))
+env = TransformedEnv(GymEnv("LunarLander-v3"),  Compose(StepCounter()))
 env.set_seed(0)
 obs, _ = env.reset()
 
