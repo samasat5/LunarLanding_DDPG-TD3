@@ -20,8 +20,9 @@ while True:
     time.sleep(1)
     if done:
         obs, _ = env.reset()
-        break
-        
+        # break
+
+time.sleep(3)
 env.close()
 
 
