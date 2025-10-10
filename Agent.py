@@ -9,8 +9,9 @@ from torchrl.envs.transforms import Compose
 
 
 
-env = (GymEnv("LunarLander-v3", render_mode="human"))
-time.sleep(10)
+env = (GymEnv("CartPole-v1"))
+# env = TransformedEnv(env, Compose(StepCounter()))
+# time.sleep(10)
 episode = 0
 env.set_seed(0)
 obs, _ = env.reset()
