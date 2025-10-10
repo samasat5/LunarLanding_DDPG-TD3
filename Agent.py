@@ -1,4 +1,4 @@
-import gym
+import gymnasium
 import numpy as np
 import torch
 torch.manual_seed(0)
