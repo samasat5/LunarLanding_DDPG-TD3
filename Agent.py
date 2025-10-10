@@ -9,12 +9,12 @@ from torchrl.envs.transforms import Compose
 
 
 # env = TransformedEnv(GymEnv("CartPole-v1"), Compose(StepCounter()))
-env = TransformedEnv(GymEnv("LunarLander-v3"),  Compose(StepCounter()))
+env = TransformedEnv(GymEnv("LunarLander-v3", render_mode="human"))
 env.set_seed(0)
 obs, _ = env.reset()
 
 while True:
-    action = torch.tensor([env.action_space.sample()])
+    action = torch.tensor(env.action_space.sample())
     obs, reward, done, _, info = env.step(action)
     print(obs)
     time.sleep(0.1)
