@@ -1,4 +1,4 @@
-import gymnasium
+import gymnasium as gym
 import numpy as np
 # import pygame
 import torch
@@ -10,25 +10,21 @@ from torchrl.envs.transforms import Compose
 
 
 
-import gymnasium as gym
-
-# Initialise the environment
 env = gym.make("LunarLander-v3", render_mode="human")
+# env = TransformedEnv(env, Compose(StepCounter()))
 
-# Reset the environment to generate the first observation
-observation, info = env.reset(seed=42)
-for _ in range(1000):
-    # this is where you would insert your policy
+obs, info = env.reset(seed=42)
+
+while True:
     action = env.action_space.sample()
-
-    # step (transition) through the environment with the action
-    # receiving the next observation, reward and if the episode has terminated or truncated
-    observation, reward, terminated, truncated, info = env.step(action)
-
-    # If the episode has ended then we can reset to start a new episode
-    if terminated or truncated:
-        observation, info = env.reset()
-
-env.close()
+    obs, reward, terminated, truncated, info = env.step(action)
+    # pygame.event.pump() 
+    done = terminated or truncated
+    # print(obs)
+    time.sleep(10)
+    if done:
+        episode += 1
+        time.sleep(2)   
+        obs, _ = env.reset()
 
 
