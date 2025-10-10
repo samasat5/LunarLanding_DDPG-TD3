@@ -16,7 +16,6 @@ observation, info = env.reset(seed=42)
 while True:
     # policy
     action = env.action_space.sample()
-
     # step (transition) through the environment with the action
     # receiving the next observation, reward and if the episode has terminated or truncated
     observation, reward, terminated, truncated, info = env.step(action)
