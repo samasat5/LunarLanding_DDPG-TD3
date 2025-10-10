@@ -5,6 +5,42 @@ from torchrl.envs import GymEnv
 from Agent import env
 from torchrl.modules import MLP
 
+import copy
+import tempfile
+
+import torch
+
+from matplotlib import pyplot as plt
+from tensordict import TensorDictBase
+
+from tensordict.nn import TensorDictModule, TensorDictSequential
+from torch import multiprocessing
+
+from torchrl.collectors import SyncDataCollector
+from torchrl.data import LazyMemmapStorage, RandomSampler, ReplayBuffer
+
+from torchrl.envs import (
+    check_env_specs,
+    ExplorationType,
+    PettingZooEnv,
+    RewardSum,
+    set_exploration_type,
+    TransformedEnv,
+    VmasEnv,
+)
+
+from torchrl.modules import (
+    AdditiveGaussianModule,
+    MultiAgentMLP,
+    ProbabilisticActor,
+    TanhDelta,
+)
+from torchrl.objectives import DDPGLoss, SoftUpdate, ValueEstimators
+
+from torchrl.record import CSVLogger, PixelRenderTransform, VideoRecorder
+from tqdm import tqdm
+
+
 module = MLP(
     out_features=env.action_spec.shape[-1],
     num_cells=[32, 64],
