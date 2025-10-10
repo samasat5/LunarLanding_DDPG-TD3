@@ -17,7 +17,7 @@ while True:
     action = torch.tensor(env.action_space.sample())
     obs, reward, done, _, info = env.step(action)
     print(obs)
-    time.sleep(0.1)
+    time.sleep(1)
     if done:
         obs, _ = env.reset()
         break
