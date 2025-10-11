@@ -22,6 +22,7 @@ LOG_EVERY = 1000
 MLP_SIZE = 256
 DISCOUNT_FACTOR = 0.99
 TAU = 0.005
+DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 # Seed the Python and RL environments to replicate similar results across training sessions. 
 #torch.manual_seed(0)
