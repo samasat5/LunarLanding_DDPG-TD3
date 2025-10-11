@@ -9,7 +9,7 @@ from tensordict.nn import TensorDictModule as Mod, TensorDictSequential as Seq
 from torchrl.envs.transforms import Compose
 
 
-env = gym.make("LunarLander-v3", render_mode="human")
+env = gym.make("LunarLanderContinuous-v3", render_mode="human")
 
 observation, info = env.reset(seed=42)
 while True:
