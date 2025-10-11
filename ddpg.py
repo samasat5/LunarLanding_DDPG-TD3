@@ -173,6 +173,8 @@ for i, data in enumerate(collector):
             total_episodes += data["next", "done"].sum()
     success_steps.append(max_length)
 
+print(f"Training took {time.time()-t0:.2f}s")
+
 # for i, data in enumerate(collector):
 #     replay_buffer.extend(data)
 
