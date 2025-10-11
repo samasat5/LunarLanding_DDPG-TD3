@@ -108,17 +108,14 @@ collector = SyncDataCollector(
     rollout_policy,
     frames_per_batch=FRAMES_PER_BATCH,
     total_frames=50_000,
-    device="cpu",
+    device=DEVICE,
 )
 
 # 7. Optimizers
 optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
 optim_critic = optim.Adam(critic.parameters(), lr=1e-3)
 
-updater = SoftUpdate( # corrige???
-    loss,
-    tau=TAU,
-)
+updater = SoftUpdate(loss, tau=TAU)
 
 # 8. Training loop
 total_count = 0
@@ -149,24 +146,6 @@ for i, data in enumerate(collector):
             loss_pi.backward()
             optim_actor.step()
             updater.step()
-
-
-            """
-            # Combined update to avoid recomputing the losses
-            losses = loss(td)
-            loss_q = losses["loss_value"]
-            loss_pi = losses["loss_actor"]
-
-            optim_critic.zero_grad(set_to_none=True)
-            loss_q.backward(retain_graph=True)
-            optim_critic.step()
-            updater.step()
-
-            optim_actor.zero_grad(set_to_none=True)
-            loss_pi.backward()
-            optim_actor.step()
-            updater.step()
-            """
 
             # Update target params
             updater.step()
