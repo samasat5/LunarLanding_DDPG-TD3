@@ -175,27 +175,4 @@ for i, data in enumerate(collector):
     success_steps.append(max_length)
 
 print(f"Training took {time.time()-t0:.2f}s")
-
-# for i, data in enumerate(collector):
-#     replay_buffer.extend(data)
-
-
-#     batch = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
-
-#     # compute DDPG losses
-#     loss_td = loss_module(batch)
-#     actor_loss = loss_td["loss_actor"]
-#     critic_loss = loss_td["loss_qvalue"]
-
-#     # critic step
-#     optim_critic.zero_grad()
-#     critic_loss.backward()
-#     optim_critic.step()
-
-#     # actor step
-#     optim_actor.zero_grad()
-#     actor_loss.backward()
-#     optim_actor.step()
-
-#     if i % 50 == 0:
-#         print(f"Step {i}: actor_loss={actor_loss.item():.3f}, critic_loss={critic_loss.item():.3f}")
+env.close()
