@@ -40,8 +40,7 @@ env = TransformedEnv(
 )
 # env.set_seed(0)
 
-# assuming ObservationNorm is at index 2 in the Compose
-obs_norm = env.transform[2]
+obs_norm = env.transform[2] # assuming ObservationNorm is at index 2 in the Compose
 obs_norm.init_stats(num_iter=1000, reduce_dim=0, cat_dim=0)
 obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
 act_dim = env.action_spec.shape[-1] #action_spec : the action space
@@ -53,8 +52,8 @@ actor_mlp = MLP(
     activation_class=nn.ReLU,     # hidden activations
     activate_last_layer=False 
 )
-actor = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_raw"]) # =policy?
-# Wrap Tanh so it applies to the "action" tensor (-> still "action")
+actor = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_raw"])
+# Wrap Tanh so it applies to the "action" tensor 
 tanh_on_action = TDM(nn.Tanh(), in_keys=["action_raw"], out_keys=["action"])
 policy = Seq(actor, tanh_on_action)   # final tanh ensures [-1, 1] range
 ou_noise = OUNoise(
