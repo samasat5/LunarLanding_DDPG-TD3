@@ -1,8 +1,6 @@
 # Ignore virtual environments
 .RLproj/
 RLproj/
-.TME1/
-TME1/
 env/
 venv/
 

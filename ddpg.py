@@ -1,6 +1,7 @@
 import pdb
 import time
 from copy import deepcopy
+import matplotlib.pyplot as plt
 import torch
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
@@ -9,27 +10,27 @@ from torchrl.data import ReplayBuffer, SamplerWithoutReplacement, LazyTensorStor
 from torchrl.objectives import DDPGLoss, SoftUpdate
 from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP
 from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
+from torchrl._utils import logger as torchrl_logger
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
-EPS_0 = 0.5
 BUFFER_LEN = 1_000_000
-TARGET_UPDATE_EPS = 0.95
 REPLAY_BUFFER_SAMPLE = 128
 LOG_EVERY = 1000
 MLP_SIZE = 256
-DISCOUNT_FACTOR = 0.99
 TAU = 0.005
-DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
+EVAL_EVERY = 10_000   # frames
+EVAL_EPISODES = 3
+DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 
 # Seed the Python and RL environments to replicate similar results across training sessions. 
-#torch.manual_seed(0)
+# torch.manual_seed(0)
 
 # 1. Environment
 env = TransformedEnv(
-    GymEnv("LunarLanderContinuous-v3"),
+    GymEnv("LunarLanderContinuous-v3", render_mode="human"),
     Compose(
         DoubleToFloat(),
         InitTracker(),
@@ -44,6 +45,24 @@ obs_norm = env.transform[2] # assuming ObservationNorm is at index 2 in the Comp
 obs_norm.init_stats(num_iter=1000, reduce_dim=0, cat_dim=0)
 obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
 act_dim = env.action_spec.shape[-1] #action_spec : the action space
+
+"""
+eval_env = TransformedEnv(
+    GymEnv("LunarLanderContinuous-v3", render_mode="human"),
+    Compose(
+        DoubleToFloat(),
+        InitTracker(),
+        ObservationNorm(in_keys=["observation"]),
+        StepCounter()
+        #RewardNorm(),
+    )
+)
+
+eval_env.transform[2].loc.copy_(env.transform[2].loc)
+eval_env.transform[2].scale.copy_(env.transform[2].scale)
+eval_env.transform[2].initialized = True
+"""
+
 
 # 2. Actor (policy)
 actor_mlp = MLP(
@@ -93,6 +112,7 @@ loss = DDPGLoss(
     delay_actor=True,            
     delay_value=True, 
 )
+updater = SoftUpdate(loss, tau=TAU)
 
 # 5. Replay buffer
 replay_buffer = ReplayBuffer(
@@ -113,8 +133,6 @@ collector = SyncDataCollector(
 # 7. Optimizers
 optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
 optim_critic = optim.Adam(critic.parameters(), lr=1e-3)
-
-updater = SoftUpdate(loss, tau=TAU)
 
 # 8. Training loop
 total_count = 0
@@ -152,5 +170,39 @@ for i, data in enumerate(collector):
             total_episodes += data["next", "done"].sum()
     success_steps.append(max_length)
 
-print(f"Training took {time.time()-t0:.2f}s")
-env.close()
+    if total_count > 0:
+        if total_count % LOG_EVERY == 0:
+            torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
+        """
+        if total_count % EVAL_EVERY < FRAMES_PER_BATCH: # A vérifier
+            policy.eval()
+            with torch.no_grad():
+                rewards, lens = [], []
+                for _ in range(EVAL_EPISODES):
+                    td = eval_env.reset()
+                    done = False
+                    episode_reward = 0.0
+                    while not done:
+                        td = policy(td)
+                        td = eval_env.step(td)
+                        episode_reward += td["next", "reward"].item()
+                        done = td["next", "done"].item()
+                        td = td.get("next")
+                    lens.append(int(td.get("step_count",0)))    
+                    rewards.append(episode_reward)
+                mean_reward = sum(rewards) / EVAL_EPISODES
+                torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
+            policy.train()
+        """
+
+t1 = time.time()
+print(f"Training took {t1-t0:.2f}s")
+torchrl_logger.info(
+    f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
+)
+
+plt.plot(success_steps)
+plt.title('Successful steps over training episodes')
+plt.xlabel('Training episodes')
+plt.ylabel('Steps')
+plt.show()
