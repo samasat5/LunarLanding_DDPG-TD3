@@ -16,6 +16,7 @@ from torchrl.envs.utils import check_env_specs
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
+TOTAL_FRAMES = 50_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -131,7 +132,7 @@ collector = SyncDataCollector(
     env,
     rollout_policy,
     frames_per_batch=FRAMES_PER_BATCH,
-    total_frames=50_000,
+    total_frames=TOTAL_FRAMES, # how many timesteps to run the agent
     device=DEVICE,
 )
 
@@ -144,7 +145,7 @@ total_count = 0
 total_episodes = 0
 t0 = time.time()
 success_steps = []
-for i, data in enumerate(collector):
+for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
     replay_buffer.extend(data)
     max_length = replay_buffer[:]["next", "step_count"].max()
     if len(replay_buffer) > INIT_RAND_STEPS:
