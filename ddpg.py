@@ -176,6 +176,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
 
             # Update target params
             updater.step()
+            
             total_count += data.numel()
             total_episodes += data["next", "done"].sum()
     success_steps.append(max_length)

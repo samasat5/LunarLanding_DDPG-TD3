@@ -11,9 +11,12 @@ from torchrl.objectives import DDPGLoss, SoftUpdate
 from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP
 from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
 from torchrl._utils import logger as torchrl_logger
+from torchrl.envs.utils import check_env_specs
+
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
+TOTAL_FRAMES = 50_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -21,16 +24,16 @@ REPLAY_BUFFER_SAMPLE = 128
 LOG_EVERY = 1000
 MLP_SIZE = 256
 TAU = 0.005
+GAMMA = 0.99
 EVAL_EVERY = 10_000   # frames
 EVAL_EPISODES = 3
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 
 # Seed the Python and RL environments to replicate similar results across training sessions. 
-# torch.manual_seed(0)
 
 # 1. Environment
 env = TransformedEnv(
-    GymEnv("LunarLanderContinuous-v3", render_mode="human"),
+    GymEnv("LunarLanderContinuous-v3"),
     Compose(
         DoubleToFloat(),
         InitTracker(),
@@ -39,14 +42,16 @@ env = TransformedEnv(
         #RewardNorm(),
     )
 )
-# env.set_seed(0)
 
-obs_norm = env.transform[2] # assuming ObservationNorm is at index 2 in the Compose
-obs_norm.init_stats(num_iter=1000, reduce_dim=0, cat_dim=0)
+env.transform[2].init_stats(1024) 
+torch.manual_seed(0)
+env.set_seed(0)
+check_env_specs(env) 
+
 obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
 act_dim = env.action_spec.shape[-1] #action_spec : the action space
 
-"""
+
 eval_env = TransformedEnv(
     GymEnv("LunarLanderContinuous-v3", render_mode="human"),
     Compose(
@@ -58,10 +63,13 @@ eval_env = TransformedEnv(
     )
 )
 
-eval_env.transform[2].loc.copy_(env.transform[2].loc)
-eval_env.transform[2].scale.copy_(env.transform[2].scale)
-eval_env.transform[2].initialized = True
-"""
+# eval_env.transform[2].loc.copy_(env.transform[2].loc)
+# eval_env.transform[2].scale.copy_(env.transform[2].scale)
+# eval_env.transform[2].initialized = True
+
+eval_env.transform[2].init_stats(1024) 
+eval_env.set_seed(0)
+check_env_specs(eval_env) 
 
 
 # 2. Actor (policy)
@@ -81,7 +89,8 @@ ou_noise = OUNoise(
     sigma=0.2,
     dt=1e-2,
 )
-rollout_policy = Seq(policy, ou_noise)
+# mettre en place gaussian noise
+rollout_policy = Seq(policy, ou_noise) # à vérifier de ne pas dépasser les bornes de l'espace des actions?????
 
 # 3. Critic (action value function)
 critic_mlp = MLP(
@@ -126,7 +135,7 @@ collector = SyncDataCollector(
     env,
     rollout_policy,
     frames_per_batch=FRAMES_PER_BATCH,
-    total_frames=50_000,
+    total_frames=TOTAL_FRAMES, # how many timesteps to run the agent
     device=DEVICE,
 )
 
@@ -139,7 +148,7 @@ total_count = 0
 total_episodes = 0
 t0 = time.time()
 success_steps = []
-for i, data in enumerate(collector):
+for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
     replay_buffer.extend(data)
     max_length = replay_buffer[:]["next", "step_count"].max()
     if len(replay_buffer) > INIT_RAND_STEPS:
@@ -152,48 +161,48 @@ for i, data in enumerate(collector):
             optim_critic.zero_grad(set_to_none=True)
             loss_vals = loss(td)
             loss_q = loss_vals["loss_value"]
-            loss_q.backward()
+            loss_pi = loss_vals["loss_actor"]
+            loss_q.backward(retain_graph=True)
             optim_critic.step()
             updater.step()
 
-            # Actor update
+            # Actor update (freeze critic params or detach inside loss)
+            for p in critic.parameters(): p.requires_grad = False
             optim_actor.zero_grad(set_to_none=True)
-            loss_vals = loss(td)
-            loss_pi = loss_vals["loss_actor"]
             loss_pi.backward()
             optim_actor.step()
             updater.step()
+            for p in critic.parameters(): p.requires_grad = True
 
             # Update target params
             updater.step()
+            
             total_count += data.numel()
             total_episodes += data["next", "done"].sum()
     success_steps.append(max_length)
 
-    if total_count > 0:
-        if total_count % LOG_EVERY == 0:
-            torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
-        """
-        if total_count % EVAL_EVERY < FRAMES_PER_BATCH: # A vérifier
-            policy.eval()
-            with torch.no_grad():
-                rewards, lens = [], []
-                for _ in range(EVAL_EPISODES):
-                    td = eval_env.reset()
-                    done = False
-                    episode_reward = 0.0
-                    while not done:
-                        td = policy(td)
-                        td = eval_env.step(td)
-                        episode_reward += td["next", "reward"].item()
-                        done = td["next", "done"].item()
-                        td = td.get("next")
-                    lens.append(int(td.get("step_count",0)))    
-                    rewards.append(episode_reward)
-                mean_reward = sum(rewards) / EVAL_EPISODES
-                torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
-            policy.train()
-        """
+    if total_count % LOG_EVERY == 0:
+        torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
+    if total_count % EVAL_EVERY < FRAMES_PER_BATCH: # A vérifier
+        policy.eval()
+        with torch.no_grad():
+            rewards, lens = [], []
+            for _ in range(EVAL_EPISODES):
+                td = eval_env.reset()
+                done = False
+                episode_reward = 0.0
+                while not done:
+                    td = policy(td)
+                    td = eval_env.step(td)
+                    episode_reward += td["next", "reward"].item()
+                    done = td["next", "done"].item()
+                    td = td.get("next")
+                lens.append(int(td.get("step_count",0)))    
+                rewards.append(episode_reward)
+            mean_reward = sum(rewards) / EVAL_EPISODES
+            torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
+        policy.train()
+
 
 t1 = time.time()
 print(f"Training took {t1-t0:.2f}s")
