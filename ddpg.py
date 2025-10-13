@@ -23,7 +23,7 @@ BUFFER_LEN = 1_000_000
 REPLAY_BUFFER_SAMPLE = 128
 LOG_EVERY = 1000
 MLP_SIZE = 256
-TAU = 0.05
+TAU = 0.005
 GAMMA = 0.99
 EVAL_EVERY = 10_000   # frames
 EVAL_EPISODES = 3
@@ -87,7 +87,7 @@ ou_noise = OUNoise(
     dt=1e-2,
 )
 # mettre en place gaussian noise
-rollout_policy = Seq(policy, ou_noise)
+rollout_policy = Seq(policy, ou_noise) # à vérifier de ne pas dépasser les bornes de l'espace des actions?????
 
 # 3. Critic (action value function)
 critic_mlp = MLP(
