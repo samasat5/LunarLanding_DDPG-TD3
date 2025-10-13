@@ -43,17 +43,8 @@ env = TransformedEnv(
     )
 )
 
-env.transform[2].init_stats(1024) 
-torch.manual_seed(0)
-env.set_seed(0)
-check_env_specs(env) 
-
-obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
-act_dim = env.action_spec.shape[-1] #action_spec : the action space
-
-
 eval_env = TransformedEnv(
-    GymEnv("LunarLanderContinuous-v3", render_mode="human"),
+    GymEnv("LunarLanderContinuous-v3"),
     Compose(
         DoubleToFloat(),
         InitTracker(),
@@ -63,14 +54,17 @@ eval_env = TransformedEnv(
     )
 )
 
-# eval_env.transform[2].loc.copy_(env.transform[2].loc)
-# eval_env.transform[2].scale.copy_(env.transform[2].scale)
-# eval_env.transform[2].initialized = True
+env.transform[2].init_stats(1024) 
+torch.manual_seed(0)
+env.set_seed(0)
+check_env_specs(env) 
 
 eval_env.transform[2].init_stats(1024) 
 eval_env.set_seed(0)
 check_env_specs(eval_env) 
 
+obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
+act_dim = env.action_spec.shape[-1] #action_spec : the action space
 
 # 2. Actor (policy)
 actor_mlp = MLP(
@@ -176,7 +170,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
 
             # Update target params
             updater.step()
-            
+
             total_count += data.numel()
             total_episodes += data["next", "done"].sum()
     success_steps.append(max_length)
