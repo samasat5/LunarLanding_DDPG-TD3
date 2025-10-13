@@ -166,11 +166,13 @@ for i, data in enumerate(collector): # runs through the data collected from the 
             optim_critic.step()
             updater.step()
 
-            # Actor update
+            # Actor update (freeze critic params or detach inside loss)
+            for p in critic.parameters(): p.requires_grad = False
             optim_actor.zero_grad(set_to_none=True)
             loss_pi.backward()
             optim_actor.step()
             updater.step()
+            for p in critic.parameters(): p.requires_grad = True
 
             # Update target params
             updater.step()
