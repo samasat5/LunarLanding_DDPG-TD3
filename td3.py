@@ -38,8 +38,7 @@ env = TransformedEnv(
         DoubleToFloat(),
         InitTracker(),
         ObservationNorm(in_keys=["observation"]),
-        StepCounter()
-        #RewardNorm(),
+        StepCounter(),
     )
 )
 
@@ -49,8 +48,7 @@ eval_env = TransformedEnv(
         DoubleToFloat(),
         InitTracker(),
         ObservationNorm(in_keys=["observation"]),
-        StepCounter()
-        #RewardNorm(),
+        StepCounter(),
     )
 )
 
