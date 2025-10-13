@@ -4,7 +4,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import torch
 from torch import nn, optim
-from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
+from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, RewardNorm, StepCounter
 from torchrl.collectors import SyncDataCollector
 from torchrl.data import ReplayBuffer, SamplerWithoutReplacement, LazyTensorStorage, RandomSampler
 from torchrl.objectives import DDPGLoss, SoftUpdate
@@ -38,8 +38,8 @@ env = TransformedEnv(
         DoubleToFloat(),
         InitTracker(),
         ObservationNorm(in_keys=["observation"]),
-        StepCounter()
-        #RewardNorm(),
+        StepCounter(),
+        RewardNorm(),
     )
 )
 
@@ -49,8 +49,8 @@ eval_env = TransformedEnv(
         DoubleToFloat(),
         InitTracker(),
         ObservationNorm(in_keys=["observation"]),
-        StepCounter()
-        #RewardNorm(),
+        StepCounter(),
+        RewardNorm(),
     )
 )
 
