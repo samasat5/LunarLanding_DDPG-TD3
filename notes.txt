@@ -4,3 +4,4 @@ débrancher le rendering, regarder les épisodes 1 par 1, coûteux
 https://github.com/pytorch/rl/discussions/2483
 
 todo : add to.device?, evaluation, add scheduler for learning rate?
+ajouter les figures 
