@@ -3,4 +3,4 @@ débrancher le rendering, regarder les épisodes 1 par 1, coûteux
 !pip install torch tensordict  gymnasium==0.29.1 pygame
 https://github.com/pytorch/rl/discussions/2483
 
-todo : add to.device, evaluation
+todo : add to.device?, evaluation, add scheduler for learning rate?
