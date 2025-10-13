@@ -33,7 +33,7 @@ DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 
 # 1. Environment
 env = TransformedEnv(
-    GymEnv("LunarLanderContinuous-v3", render_mode="human"),
+    GymEnv("LunarLanderContinuous-v3"),
     Compose(
         DoubleToFloat(),
         InitTracker(),
@@ -68,7 +68,6 @@ eval_env = TransformedEnv(
 # eval_env.transform[2].initialized = True
 
 eval_env.transform[2].init_stats(1024) 
-torch.manual_seed(0)
 eval_env.set_seed(0)
 check_env_specs(eval_env) 
 
@@ -183,7 +182,6 @@ for i, data in enumerate(collector): # runs through the data collected from the 
     if total_count > 0:
         if total_count % LOG_EVERY == 0:
             torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
-        """
         if total_count % EVAL_EVERY < FRAMES_PER_BATCH: # A vérifier
             policy.eval()
             with torch.no_grad():
@@ -203,7 +201,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
                 mean_reward = sum(rewards) / EVAL_EPISODES
                 torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
             policy.train()
-        """
+
 
 t1 = time.time()
 print(f"Training took {t1-t0:.2f}s")
