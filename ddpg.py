@@ -33,7 +33,7 @@ DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 
 # 1. Environment
 env = TransformedEnv(
-    GymEnv("LunarLanderContinuous-v3"),
+    GymEnv("LunarLanderContinuous-v3", render_mode="human"),
     Compose(
         DoubleToFloat(),
         InitTracker(),
@@ -51,7 +51,7 @@ check_env_specs(env)
 obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
 act_dim = env.action_spec.shape[-1] #action_spec : the action space
 
-"""
+
 eval_env = TransformedEnv(
     GymEnv("LunarLanderContinuous-v3", render_mode="human"),
     Compose(
@@ -63,10 +63,14 @@ eval_env = TransformedEnv(
     )
 )
 
-eval_env.transform[2].loc.copy_(env.transform[2].loc)
-eval_env.transform[2].scale.copy_(env.transform[2].scale)
-eval_env.transform[2].initialized = True
-"""
+# eval_env.transform[2].loc.copy_(env.transform[2].loc)
+# eval_env.transform[2].scale.copy_(env.transform[2].scale)
+# eval_env.transform[2].initialized = True
+
+eval_env.transform[2].init_stats(1024) 
+torch.manual_seed(0)
+eval_env.set_seed(0)
+check_env_specs(eval_env) 
 
 
 # 2. Actor (policy)
