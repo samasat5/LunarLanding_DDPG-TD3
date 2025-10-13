@@ -33,7 +33,7 @@ DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 
 # 1. Environment
 env = TransformedEnv(
-    GymEnv("LunarLanderContinuous-v3", render_mode="human"),
+    GymEnv("LunarLanderContinuous-v3"),
     Compose(
         DoubleToFloat(),
         InitTracker(),
