@@ -161,14 +161,13 @@ for i, data in enumerate(collector): # runs through the data collected from the 
             optim_critic.zero_grad(set_to_none=True)
             loss_vals = loss(td)
             loss_q = loss_vals["loss_value"]
-            loss_q.backward()
+            loss_pi = loss_vals["loss_actor"]
+            loss_q.backward(retain_graph=True)
             optim_critic.step()
             updater.step()
 
             # Actor update
             optim_actor.zero_grad(set_to_none=True)
-            loss_vals = loss(td)
-            loss_pi = loss_vals["loss_actor"]
             loss_pi.backward()
             optim_actor.step()
             updater.step()
