@@ -11,8 +11,6 @@ from torchrl.objectives import DDPGLoss, SoftUpdate
 from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP
 from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
 from torchrl._utils import logger as torchrl_logger
-from torchrl.envs.utils import check_env_specs
-
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
@@ -22,13 +20,13 @@ BUFFER_LEN = 1_000_000
 REPLAY_BUFFER_SAMPLE = 128
 LOG_EVERY = 1000
 MLP_SIZE = 256
-TAU = 0.05
-GAMMA = 0.99
+TAU = 0.005
 EVAL_EVERY = 10_000   # frames
 EVAL_EPISODES = 3
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 
 # Seed the Python and RL environments to replicate similar results across training sessions. 
+# torch.manual_seed(0)
 
 # 1. Environment
 env = TransformedEnv(
@@ -41,12 +39,10 @@ env = TransformedEnv(
         #RewardNorm(),
     )
 )
+# env.set_seed(0)
 
-env.transform[2].init_stats(1024) 
-torch.manual_seed(0)
-env.set_seed(0)
-check_env_specs(env) 
-
+obs_norm = env.transform[2] # assuming ObservationNorm is at index 2 in the Compose
+obs_norm.init_stats(num_iter=1000, reduce_dim=0, cat_dim=0)
 obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
 act_dim = env.action_spec.shape[-1] #action_spec : the action space
 
@@ -85,7 +81,6 @@ ou_noise = OUNoise(
     sigma=0.2,
     dt=1e-2,
 )
-# mettre en place gaussian noise
 rollout_policy = Seq(policy, ou_noise)
 
 # 3. Critic (action value function)
