@@ -74,6 +74,7 @@ success_steps = []
 
 OPTIM_STEPS = 10
 INIT_RAND_STEPS = 5000 # number of random steps at the beginning of training
+LOG_EVERY = 1000
 
 for i, data in enumerate(collector):
     rb.extend(data)
@@ -106,10 +107,18 @@ for i, data in enumerate(collector):
                 total_episodes = 0
                 success_steps.append(data["step_count"][data["done"]].cpu().numpy())
                 plt.figure(figsize=(10,5))
-                plt.title("Steps per episode")
-                plt.xlabel("Episode")
+                plt.title("QValues per episode")
+                plt.xlabel("QValues")
                 plt.ylabel("Steps")
-                plt.plot([step for sublist in success_steps for step in sublist])
-                plt.show()
+                # plot the q values over the episodes
+                plt.plot([loss_dict['qvalue'].mean().item()] * len(success_steps), color='r')
+        success_steps.append(max_length)
+
+    if total_count > 0 and total_count % LOG_EVERY == 0:
+        torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(rb)}, Number of episodes: {total_episodes}")
+
+    if max_length > 475:
+        print("TRAINING COMPLETE")
+        break
 
 
