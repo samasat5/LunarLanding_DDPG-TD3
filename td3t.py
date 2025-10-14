@@ -41,7 +41,7 @@ actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_value"])
 
 EPS_0 = 0.2
 exploration_module = EGreedyModule(
-    action_spec=env.action_spec,
+    spec=env.action_spec,
     eps_init=EPS_0)
 policy = Seq(actor_net, exploration_module)
 
