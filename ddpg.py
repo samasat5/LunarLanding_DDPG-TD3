@@ -170,6 +170,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
 
             total_count += data.numel()
             total_episodes += data["next", "done"].sum()
+            plt.plot([loss(td)['qvalue'].mean().item()] * len(success_steps), color='r')
     success_steps.append(max_length)
 
     if total_count % LOG_EVERY == 0:
@@ -201,8 +202,12 @@ torchrl_logger.info(
     f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
 )
 
-plt.plot(success_steps)
-plt.title('Successful steps over training episodes')
-plt.xlabel('Training episodes')
-plt.ylabel('Steps')
+# plt.plot(success_steps)
+# plt.title('Successful steps over training episodes')
+# plt.xlabel('Training episodes')
+# plt.ylabel('Steps')
+plt.figure(figsize=(10,5))
+plt.title("QValues per episode")
+plt.xlabel("QValues")
+plt.ylabel("Steps")
 plt.show()

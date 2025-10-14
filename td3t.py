@@ -116,10 +116,7 @@ for i, data in enumerate(collector):
                 total_count = 0
                 total_episodes = 0
                 success_steps.append(data["step_count"][data["done"]].cpu().numpy())
-                plt.figure(figsize=(10,5))
-                plt.title("QValues per episode")
-                plt.xlabel("QValues")
-                plt.ylabel("Steps")
+
                 # plot the q values over the episodes
                 plt.plot([loss_dict['qvalue'].mean().item()] * len(success_steps), color='r')
         success_steps.append(max_length)
@@ -131,4 +128,9 @@ for i, data in enumerate(collector):
         print("TRAINING COMPLETE")
         break
 
+plt.figure(figsize=(10,5))
+plt.title("QValues per episode")
+plt.xlabel("QValues")
+plt.ylabel("Steps")
+plt.show()
 
