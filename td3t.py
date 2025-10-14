@@ -39,6 +39,7 @@ qvalue_2 = critic_net_2
 actor_mlp = MLP(out_features=env.action_spec.shape[-1], num_cells=[MLP_SIZE, MLP_SIZE])
 actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_value"])
 
+pdb.set_trace()
 EPS_0 = 0.2
 exploration_module = EGreedyModule(
     spec=env.action_spec,
