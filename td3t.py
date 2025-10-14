@@ -80,12 +80,17 @@ for i, data in enumerate(collector):
     max_length = rb[:]["next", "step_count"].max()
     if len(rb) > INIT_RAND_STEPS:
         for _ in range(OPTIM_STEPS):
+            
             batch = rb.sample(128)
             loss_dict = loss(batch)
             optim.zero_grad()
             loss_dict["loss"].backward()
             optim.step()
+            # Update exploration factor
+            exploration_module.step(data.numel())
             updater.step()
+            
+            
             total_count += data.numel()
             total_episodes += data["done"].sum().item()
             if (i + 1) % 10 == 0:
