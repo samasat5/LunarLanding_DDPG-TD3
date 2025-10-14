@@ -1,4 +1,5 @@
 import time
+import pdb
 import matplotlib.pyplot as plt
 from torchrl.envs import GymEnv, StepCounter, TransformedEnv
 from tensordict.nn import TensorDictModule as TensorDict, TensorDictSequential as Seq
@@ -15,8 +16,8 @@ env = TransformedEnv(
     StepCounter(max_steps=1000))
 env.set_seed(0)
 
-obs_dim = env.observation_spec.shape[-1]
-n_actions = env.action_spec.shape[-1]
+obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
+act_dim = env.action_spec.shape[-1] #action_spec : the action space
 max_action = env.action_spec.space.high[0]
 min_action = env.action_spec.space.low[0]
 
