@@ -30,7 +30,7 @@ critic_net_1 = TensorDict(critic_mlp_1, in_keys=["observation", "action"], out_k
 qvalue_1 = QValueModule(critic_net_1, action_space=env.action_spec)  
 
 critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
-critic_net_2 = TensorDict(critic_mlp_2, in_keys=["observation   ", "action"], out_keys=["state_action_value"])      
+critic_net_2 = TensorDict(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value"])      
 qvalue_2 = QValueModule(critic_net_2, action_space=env.action_spec)  
 
 #  Actor
