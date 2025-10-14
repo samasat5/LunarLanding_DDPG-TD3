@@ -58,9 +58,13 @@ BUFFER_LEN = 100000
 rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 
 
-# DDPG Loss
-loss = TD3Loss(value_network=policy, action_space=env.action_spec, delay_value=True)
-
+# TD3 Loss
+loss = TD3Loss(
+    value_network=(qvalue_1, qvalue_2),  # Pass both Q-networks
+    actor_network=actor_net,             # Pass the actor network
+    action_space=env.action_spec,
+    delay_value=True
+)
 
 
 # optimizer
