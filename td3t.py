@@ -22,13 +22,15 @@ max_action = env.action_spec.space.high[0]
 min_action = env.action_spec.space.low[0]
 
 
-# pdb.set_trace()
+
+pdb.set_trace()
 
 # Critic
 MLP_SIZE = 64
 critic_mlp_1 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
 critic_net_1 = TensorDict(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
 qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
+
 
 critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
 critic_net_2 = TensorDict(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value"])      
