@@ -9,6 +9,8 @@ from torchrl.collectors import SyncDataCollector
 from torchrl.data import LazyTensorStorage, ReplayBuffer
 from torch.optim import Adam
 from torchrl._utils import logger as torchrl_logger
+import torch
+from torch import nn, optim
 
 # Environment
 env = TransformedEnv(
@@ -36,10 +38,13 @@ critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["s
 qvalue_2 = critic_net_2
 
 #  Actor
-actor_mlp = MLP(out_features=env.action_spec.shape[-1], num_cells=[MLP_SIZE, MLP_SIZE])
+actor_mlp = MLP(
+    out_features=act_dim, 
+    num_cells=[MLP_SIZE, MLP_SIZE], )
+
 actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_value"])
 
-pdb.set_trace()
+# pdb.set_trace()
 EPS_0 = 0.2
 exploration_module = EGreedyModule(
     spec=env.action_spec,
