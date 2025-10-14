@@ -72,33 +72,39 @@ t0 = time.time()
 success_steps = []
 
 
+OPTIM_STEPS = 10
+INIT_RAND_STEPS = 5000 # number of random steps at the beginning of training
+
 for i, data in enumerate(collector):
     rb.extend(data)
-    batch = rb.sample(128)
-    loss_dict = loss(batch)
-    optim.zero_grad()
-    loss_dict["loss"].backward()
-    optim.step()
-    updater.step()
-    total_count += data.numel()
-    total_episodes += data["done"].sum().item()
-    if (i + 1) % 10 == 0:
-        fps = total_count / (time.time() - t0)
-        print(
-            f"frames: {total_count}, episodes: {total_episodes}, fps: {fps:.2f}, "
-            f"loss: {loss_dict['loss'].item():.3f}, "
-            f"qvalue: {loss_dict['qvalue'].mean().item():.3f}, "
-            f"policy_loss: {loss_dict['policy_loss'].item():.3f}"
-        )
-        t0 = time.time()
-        total_count = 0
-        total_episodes = 0
-        success_steps.append(data["step_count"][data["done"]].cpu().numpy())
-        plt.figure(figsize=(10,5))
-        plt.title("Steps per episode")
-        plt.xlabel("Episode")
-        plt.ylabel("Steps")
-        plt.plot([step for sublist in success_steps for step in sublist])
-        plt.show()
+    max_length = rb[:]["next", "step_count"].max()
+    if len(rb) > INIT_RAND_STEPS:
+        for _ in range(OPTIM_STEPS):
+            batch = rb.sample(128)
+            loss_dict = loss(batch)
+            optim.zero_grad()
+            loss_dict["loss"].backward()
+            optim.step()
+            updater.step()
+            total_count += data.numel()
+            total_episodes += data["done"].sum().item()
+            if (i + 1) % 10 == 0:
+                fps = total_count / (time.time() - t0)
+                print(
+                    f"frames: {total_count}, episodes: {total_episodes}, fps: {fps:.2f}, "
+                    f"loss: {loss_dict['loss'].item():.3f}, "
+                    f"qvalue: {loss_dict['qvalue'].mean().item():.3f}, "
+                    f"policy_loss: {loss_dict['policy_loss'].item():.3f}"
+                )
+                t0 = time.time()
+                total_count = 0
+                total_episodes = 0
+                success_steps.append(data["step_count"][data["done"]].cpu().numpy())
+                plt.figure(figsize=(10,5))
+                plt.title("Steps per episode")
+                plt.xlabel("Episode")
+                plt.ylabel("Steps")
+                plt.plot([step for sublist in success_steps for step in sublist])
+                plt.show()
 
 
