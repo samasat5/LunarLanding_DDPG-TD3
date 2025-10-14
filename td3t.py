@@ -26,17 +26,17 @@ min_action = env.action_spec.space.low[0]
 # Critic
 MLP_SIZE = 64
 critic_mlp_1 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
-critic_net_1 = TensorDict(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
+critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
 qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
 
 
 critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
-critic_net_2 = TensorDict(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value"])      
+critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value"])      
 qvalue_2 = QValueModule(critic_net_2, spec=env.action_spec)  
 
 #  Actor
 actor_mlp = MLP(out_features=env.action_spec.shape[-1], num_cells=[MLP_SIZE, MLP_SIZE])
-actor_net = TensorDict(actor_mlp, in_keys=["observation"], out_keys=["action_value"])
+actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_value"])
 
 EPS_0 = 0.2
 exploration_module = EGreedyModule(
