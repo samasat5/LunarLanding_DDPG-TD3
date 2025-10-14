@@ -31,3 +31,8 @@ critic_mlp = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
 critic_net = TensorDict(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
 qvalue = QValueModule(critic_net)
 
+EPS_0 = 0.2
+exploration_module = EGreedyModule(
+    action_spec=env.action_spec,
+    eps_init=EPS_0)
+policy = Seq(actor_net, exploration_module)
