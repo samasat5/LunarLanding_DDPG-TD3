@@ -42,7 +42,7 @@ actor_mlp = MLP(
     out_features=act_dim, 
     num_cells=[MLP_SIZE, MLP_SIZE], )
 
-actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_value"])
+actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action"])
 
 
 # pdb.set_trace()
