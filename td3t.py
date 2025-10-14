@@ -3,7 +3,7 @@ import pdb
 import matplotlib.pyplot as plt
 from torchrl.envs import GymEnv, StepCounter, TransformedEnv
 from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
-from torchrl.modules import EGreedyModule, MLP, QValueModule
+from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP, EGreedyModule
 from torchrl.objectives import DQNLoss, SoftUpdate, DDPGLoss,TD3Loss
 from torchrl.collectors import SyncDataCollector
 from torchrl.data import LazyTensorStorage, ReplayBuffer
@@ -47,9 +47,12 @@ actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_value"])
 
 # pdb.set_trace()
 EPS_0 = 0.2
-exploration_module = EGreedyModule(
+exploration_module = OUNoise(
     spec=env.action_spec,
-    eps_init=EPS_0)
+    theta=0.15,
+    sigma=0.2,
+    dt=1e-2,
+)
 policy = Seq(actor_net, exploration_module)
 
 # Collect the data from the agent’s interactions with the environment
