@@ -2,7 +2,7 @@ import time
 import pdb
 import matplotlib.pyplot as plt
 from torchrl.envs import GymEnv, StepCounter, TransformedEnv
-from tensordict.nn import TensorDictModule as TensorDict, TensorDictSequential as Seq
+from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
 from torchrl.modules import EGreedyModule, MLP, QValueModule
 from torchrl.objectives import DQNLoss, SoftUpdate, DDPGLoss,TD3Loss
 from torchrl.collectors import SyncDataCollector
