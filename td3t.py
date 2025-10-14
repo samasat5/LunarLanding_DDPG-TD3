@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from torchrl.envs import GymEnv, StepCounter, TransformedEnv
 from tensordict.nn import TensorDictModule as TensorDict, TensorDictSequential as Seq
 from torchrl.modules import EGreedyModule, MLP, QValueModule
-from torchrl.objectives import DQNLoss, SoftUpdate
+from torchrl.objectives import DQNLoss, SoftUpdate, DDPGLoss
 from torchrl.collectors import SyncDataCollector
 from torchrl.data import LazyTensorStorage, ReplayBuffer
 from torch.optim import Adam
@@ -50,3 +50,7 @@ collector = SyncDataCollector(
 # Replay buffer
 BUFFER_LEN = 100000
 rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
+
+
+# DDPG Loss
+loss = DDPGLoss(value_network=policy, action_space=env.action_spec, delay_value=True)
