@@ -54,3 +54,14 @@ rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 
 # DDPG Loss
 loss = DDPGLoss(value_network=policy, action_space=env.action_spec, delay_value=True)
+
+
+# optimizer
+ALPHA = 1e-3
+optim = Adam(loss.parameters(), lr=ALPHA)
+
+# Target network update
+TAU = 0.01
+updater = SoftUpdate(loss, tau=TAU) # for updating target networks
+
+
