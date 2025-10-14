@@ -45,7 +45,7 @@ actor_mlp = MLP(
 actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_value"])
 
 
-pdb.set_trace()
+# pdb.set_trace()
 EPS_0 = 0.2
 exploration_module = EGreedyModule(
     spec=env.action_spec,
