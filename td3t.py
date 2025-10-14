@@ -66,6 +66,9 @@ optim = Adam(loss.parameters(), lr=ALPHA)
 TAU = 0.01
 updater = SoftUpdate(loss, tau=TAU) # for updating target networks
 
-
+total_count = 0
+total_episodes = 0
+t0 = time.time()
+success_steps = []
 
 
