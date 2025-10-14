@@ -21,9 +21,7 @@ act_dim = env.action_spec.shape[-1] #action_spec : the action space
 max_action = env.action_spec.space.high[0]
 min_action = env.action_spec.space.low[0]
 
-
-
-pdb.set_trace()
+# pdb.set_trace()
 
 # Critic
 MLP_SIZE = 64
