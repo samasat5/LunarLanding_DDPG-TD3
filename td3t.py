@@ -51,7 +51,6 @@ collector = SyncDataCollector(
     policy,
     total_frames=10000,
     frames_per_batch=1000,
-    max_frames_per_traj=1000,
     device="cpu",
 )
 
