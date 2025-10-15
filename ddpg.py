@@ -129,8 +129,8 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
     frames_per_batch=FRAMES_PER_BATCH,
     total_frames=TOTAL_FRAMES, # how many timesteps to run the agent, If the total_frames is not divisible by frames_per_batch, an exception is raised.
     device=DEVICE,
-    replay_buffer=replay_buffer,
-    extend_buffer=False, # =(env.step -> transition -> immediately added to replay_buffer)
+    # replay_buffer=replay_buffer,
+    # extend_buffer=False, # =(env.step -> transition -> immediately added to replay_buffer)
 )
 
 # 7. Optimizers
@@ -145,38 +145,39 @@ success_steps, qvalues = [], []
 
 # add tqdm
 for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
+    replay_buffer.extend(data) # add data to the replay buffer
     max_length = replay_buffer[:]["next", "step_count"].max()
     # pdb.set_trace()
-    if len(replay_buffer) > INIT_RAND_STEPS:
-        for _ in range(OPTIM_STEPS):
-            if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
-                break
-            td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
+    #if len(replay_buffer) > INIT_RAND_STEPS:
+    for _ in range(OPTIM_STEPS):
+        # if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
+        #     break
+        td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
 
-            # Critic update
-            optim_critic.zero_grad(set_to_none=True)
-            loss_q = loss(td)["loss_value"]
-            loss_q.backward()
-            optim_critic.step()
-            updater.step()
+        # Critic update
+        optim_critic.zero_grad(set_to_none=True)
+        loss_q = loss(td)["loss_value"]
+        loss_q.backward()
+        optim_critic.step()
+        updater.step()
 
-            # Actor update (freeze critic params or detach inside loss)
-            for p in critic.parameters(): p.requires_grad = False
-            optim_actor.zero_grad(set_to_none=True)
-            loss_pi = loss(td)["loss_actor"]
-            loss_pi.backward()
-            optim_actor.step()
-            updater.step()
-            for p in critic.parameters(): p.requires_grad = True
+        # Actor update (freeze critic params or detach inside loss)
+        for p in critic.parameters(): p.requires_grad = False
+        optim_actor.zero_grad(set_to_none=True)
+        loss_pi = loss(td)["loss_actor"]
+        loss_pi.backward()
+        optim_actor.step()
+        updater.step()
+        for p in critic.parameters(): p.requires_grad = True
 
-            # Update target params
-            updater.step()
-            pdb.set_trace()
+        # Update target params
+        updater.step()
+        #pdb.set_trace()
 
-            total_count += data.numel()
-            total_episodes += data["next", "done"].sum()
-            qvalues.append(loss(td)["loss_value"].item()) # loss_q or loss(td)
-        success_steps.append(max_length)
+        total_count += data.numel()
+        total_episodes += data["next", "done"].sum()
+        qvalues.append(loss(td)["loss_value"].item()) # loss_q or loss(td)
+    success_steps.append(max_length)
 
     if total_count % LOG_EVERY == 0:
         torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
@@ -207,9 +208,9 @@ torchrl_logger.info(
     f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
 )
 
-plt.plot(qvalues)
 plt.figure(figsize=(10,5))
 plt.title("QValues per episode")
 plt.xlabel("QValues")
 plt.ylabel("Steps")
+plt.plot(qvalues)
 plt.show()
