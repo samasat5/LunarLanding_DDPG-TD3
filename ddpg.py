@@ -74,7 +74,7 @@ actor_mlp = MLP(
 actor = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_raw"])
 # Wrap Tanh so it applies to the "action" tensor 
 tanh_on_action = TDM(nn.Tanh(), in_keys=["action_raw"], out_keys=["action"])
-policy = Seq(actor, tanh_on_action)   # final tanh ensures [-1, 1] range
+policy = Seq(actor, tanh_on_action, selected_out_keys=["action"])   # final tanh ensures [-1, 1] range
 ou_noise = OUNoise(
     spec=env.action_spec,
     theta=0.15,
@@ -113,6 +113,7 @@ loss = DDPGLoss(
     delay_actor=True,            
     delay_value=True, 
 )
+loss.make_value_estimator(gamma=GAMMA)
 updater = SoftUpdate(loss, tau=TAU)
 
 # 5. Replay buffer
@@ -123,12 +124,15 @@ replay_buffer = ReplayBuffer(
 )
 
 # 6. Collector
-collector = SyncDataCollector(
+collector = SyncDataCollector( # renvoie des batches de transitions prêts à mettre dans le rb
     env,
     rollout_policy,
     frames_per_batch=FRAMES_PER_BATCH,
-    total_frames=TOTAL_FRAMES, # how many timesteps to run the agent
+    total_frames=TOTAL_FRAMES, # how many timesteps to run the agent, If the total_frames is not divisible by frames_per_batch, an exception is raised.
+    init_random_frames=INIT_RAND_STEPS, # number of initial random steps to populate the replay buffer before training begins, #if len(replay_buffer) > INIT_RAND_STEPS:
     device=DEVICE,
+    # replay_buffer=replay_buffer,
+    # extend_buffer=False, # =(env.step -> transition -> immediately added to replay_buffer)
 )
 
 # 7. Optimizers
@@ -139,38 +143,43 @@ optim_critic = optim.Adam(critic.parameters(), lr=1e-3)
 total_count = 0
 total_episodes = 0
 t0 = time.time()
-success_steps = []
+success_steps, qvalues = [], []
+
+# add tqdm
 for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
-    replay_buffer.extend(data)
+    replay_buffer.extend(data) # add data to the replay buffer
     max_length = replay_buffer[:]["next", "step_count"].max()
-    if len(replay_buffer) > INIT_RAND_STEPS:
-        for _ in range(OPTIM_STEPS):
-            if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
-                break
-            td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
+    # pdb.set_trace()
+    for _ in range(OPTIM_STEPS):
+        # if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
+        #     break
+        td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
 
-            # Critic update
-            optim_critic.zero_grad(set_to_none=True)
-            loss_q = loss(td)["loss_value"]
-            loss_q.backward()
-            optim_critic.step()
-            updater.step()
+        # Critic update
+        optim_critic.zero_grad(set_to_none=True)
+        loss_q = loss(td)["loss_value"]
+        loss_q.backward()
+        optim_critic.step()
+        updater.step()
 
-            # Actor update (freeze critic params or detach inside loss)
-            for p in critic.parameters(): p.requires_grad = False
-            optim_actor.zero_grad(set_to_none=True)
-            loss_pi = loss(td)["loss_actor"]
-            loss_pi.backward()
-            optim_actor.step()
-            updater.step()
-            for p in critic.parameters(): p.requires_grad = True
+        # Actor update (freeze critic params or detach inside loss)
+        for p in critic.parameters(): p.requires_grad = False
+        optim_actor.zero_grad(set_to_none=True)
+        loss_pi = loss(td)["loss_actor"]
+        loss_pi.backward()
+        optim_actor.step()
+        updater.step()
+        for p in critic.parameters(): p.requires_grad = True
 
-            # Update target params
-            updater.step()
+        ou_noise.step(data.numel()) # make the noise decay over time
 
-            total_count += data.numel()
-            total_episodes += data["next", "done"].sum()
-            plt.plot([loss(td)['qvalue'].mean().item()] * len(success_steps), color='r')
+        # Update target params
+        updater.step()
+        #pdb.set_trace()
+
+        total_count += data.numel()
+        total_episodes += data["next", "done"].sum()
+        qvalues.append(loss(td)["loss_value"].item()) # loss_q or loss(td)
     success_steps.append(max_length)
 
     if total_count % LOG_EVERY == 0:
@@ -202,12 +211,9 @@ torchrl_logger.info(
     f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
 )
 
-# plt.plot(success_steps)
-# plt.title('Successful steps over training episodes')
-# plt.xlabel('Training episodes')
-# plt.ylabel('Steps')
 plt.figure(figsize=(10,5))
 plt.title("QValues per episode")
 plt.xlabel("QValues")
 plt.ylabel("Steps")
+plt.plot(qvalues)
 plt.show()
