@@ -143,7 +143,7 @@ success_steps, qvalues = [], []
 for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
     replay_buffer.extend(data)
     max_length = replay_buffer[:]["next", "step_count"].max()
-    pdb.set_trace()
+    # pdb.set_trace()
     if len(replay_buffer) > INIT_RAND_STEPS:
         for _ in range(OPTIM_STEPS):
             if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
