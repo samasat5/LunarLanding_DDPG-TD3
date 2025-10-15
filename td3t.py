@@ -91,11 +91,12 @@ collector = SyncDataCollector(
 BUFFER_LEN = 100000
 rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 
-# TD3 Loss
-loss = TD3Loss(
-    qvalue_network=(critic_net_1, critic_net_2),  
-    actor_network=actor_net,           
-)
+
+# # TD3 Loss
+# loss = TD3Loss(
+#     qvalue_network=(critic_net_1, critic_net_2),  
+#     actor_network=actor_net,           
+# )
 
 
 # # optimizer
