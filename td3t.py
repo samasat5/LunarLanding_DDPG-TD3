@@ -1,20 +1,16 @@
+import pdb
 import time
 from copy import deepcopy
-import pdb
-import torchrl
 import matplotlib.pyplot as plt
-from tensordict import TensorDict
-from torchrl.envs import GymEnv, StepCounter, TransformedEnv
-from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
-from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP, EGreedyModule
-from torchrl.objectives import DQNLoss, SoftUpdate, DDPGLoss,TD3Loss
-from torchrl.collectors import SyncDataCollector
-from torchrl.data import LazyTensorStorage, ReplayBuffer, RandomSampler
-from torch.optim import Adam
-from torchrl._utils import logger as torchrl_logger
 import torch
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
+from torchrl.collectors import SyncDataCollector
+from torchrl.data import ReplayBuffer, SamplerWithoutReplacement, LazyTensorStorage, RandomSampler
+from torchrl.objectives import TD3Loss, SoftUpdate
+from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP
+from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
+from torchrl._utils import logger as torchrl_logger
 from torchrl.envs.utils import check_env_specs
 
 
