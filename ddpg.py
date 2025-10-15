@@ -177,11 +177,9 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         updater.step()
         for p in critic.parameters(): p.requires_grad = True
 
-        ou_noise.step(data.numel()) # make the noise decay over time
+        # ou_noise.step(data.numel()) # make the noise decay over time
 
-        # Update target params
-        updater.step()
-        #pdb.set_trace()
+
 
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
