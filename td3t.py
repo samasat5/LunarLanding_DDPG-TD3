@@ -9,7 +9,7 @@ from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
 from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP, EGreedyModule
 from torchrl.objectives import DQNLoss, SoftUpdate, DDPGLoss,TD3Loss
 from torchrl.collectors import SyncDataCollector
-from torchrl.data import LazyTensorStorage, ReplayBuffer
+from torchrl.data import LazyTensorStorage, ReplayBuffer, RandomSampler
 from torch.optim import Adam
 from torchrl._utils import logger as torchrl_logger
 import torch
@@ -19,7 +19,19 @@ from torchrl.envs.utils import check_env_specs
 
 
 # configurations
+INIT_RAND_STEPS = 5000 
+TOTAL_FRAMES = 50_000
+FRAMES_PER_BATCH = 100
+OPTIM_STEPS = 10
+BUFFER_LEN = 1_000_000
+REPLAY_BUFFER_SAMPLE = 128
+LOG_EVERY = 1000
 MLP_SIZE = 256
+TAU = 0.005
+GAMMA = 0.99
+EVAL_EVERY = 10_000   # frames
+EVAL_EPISODES = 3
+DEVICE = "cpu"
 EPS_0 = 0.2
 BUFFER_LEN = 100000
 
@@ -70,10 +82,9 @@ actor_mlp = MLP(
     activation_class=nn.ReLU,
     activate_last_layer=False
 )
-
 actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_raw"])
-
-
+tanh_on_action = TDM(nn.Tanh(), in_keys=["action_raw"], out_keys=["action"])
+policy = Seq(actor_net, tanh_on_action, selected_out_keys=["action"])   # final tanh ensures [-1, 1] range
 
 exploration_module = OUNoise(
     spec=env.action_spec,
@@ -81,22 +92,31 @@ exploration_module = OUNoise(
     sigma=0.2,
     dt=1e-2,
 )
-policy = Seq(actor_net, exploration_module)
+rollout_policy = Seq(actor_net, exploration_module)
 
-
+# Targets
+actor_target = deepcopy(actor_net) # no noise in target
+critic_1_target = deepcopy(critic_net_1)
+critic_2_target = deepcopy(critic_net_2)
 
 # Collect the data from the agent’s interactions with the environment
 collector = SyncDataCollector(
     env,
-    policy,
-    total_frames=10000,
-    frames_per_batch=1000,
-    device="cpu",
+    rollout_policy,
+    total_frames=TOTAL_FRAMES,
+    frames_per_batch=FRAMES_PER_BATCH,
+    init_random_frames=INIT_RAND_STEPS,
+    device=DEVICE,
 )
 
 # Replay buffer
-rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
+rb = ReplayBuffer(
+    storage=LazyTensorStorage(BUFFER_LEN),
+    sampler=RandomSampler(),
+)
 
+optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
+optim_critic = optim.Adam(critic_net_1.parameters(), lr=1e-3)
 
 
 # # test
