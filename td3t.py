@@ -1,4 +1,5 @@
 import time
+from copy import deepcopy
 import pdb
 import torchrl
 import matplotlib.pyplot as plt
@@ -19,6 +20,8 @@ from torchrl.envs.utils import check_env_specs
 
 # configurations
 MLP_SIZE = 256
+EPS_0 = 0.2
+BUFFER_LEN = 100000
 
 # Environment
 env = TransformedEnv(
@@ -54,7 +57,7 @@ critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["s
 # input_data = TensorDict({'observation': observation_example, 'action': action_example})
 
 
-critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
+critic_mlp_2 = deepcopy(critic_mlp_1)
 critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value2"])      
 # # qvalue_2 = QValueModule(critic_net_2, spec=env.action_spec)  
 # qvalue_2 = critic_net_2
@@ -63,13 +66,15 @@ critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["s
 #  Actor
 actor_mlp = MLP(
     out_features=act_dim, 
-    num_cells=[MLP_SIZE, MLP_SIZE], )
+    num_cells=[MLP_SIZE, MLP_SIZE], 
+    activation_class=nn.ReLU,
+    activate_last_layer=False
+)
 
-actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action"])
+actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_raw"])
 
 
 
-EPS_0 = 0.2
 exploration_module = OUNoise(
     spec=env.action_spec,
     theta=0.15,
@@ -90,7 +95,6 @@ collector = SyncDataCollector(
 )
 
 # Replay buffer
-BUFFER_LEN = 100000
 rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 
 
