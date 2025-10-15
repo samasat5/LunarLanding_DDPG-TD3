@@ -91,6 +91,7 @@ collector = SyncDataCollector(
 BUFFER_LEN = 100000
 rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 
+
 # TD3 Loss
 loss = TD3Loss(
     qvalue_network=(critic_net_1, critic_net_2),  
@@ -98,70 +99,67 @@ loss = TD3Loss(
 )
 
 
-# optimizer
-ALPHA = 1e-3
-optim = Adam(loss.parameters(), lr=ALPHA)
+# # optimizer
+# ALPHA = 1e-3
+# optim = Adam(loss.parameters(), lr=ALPHA)
 
-# Target network update
-TAU = 0.01
-updater = SoftUpdate(loss, tau=TAU) # for updating target networks
+# # Target network update
+# TAU = 0.01
+# updater = SoftUpdate(loss, tau=TAU) # for updating target networks
 
-total_count = 0
-total_episodes = 0
-t0 = time.time()
-success_steps = []
+# total_count = 0
+# total_episodes = 0
+# t0 = time.time()
+# success_steps = []
 
 
-OPTIM_STEPS = 10
-INIT_RAND_STEPS = 5000 # number of random steps at the beginning of training
-LOG_EVERY = 1000
+# OPTIM_STEPS = 10
+# INIT_RAND_STEPS = 5000 # number of random steps at the beginning of training
+# LOG_EVERY = 1000
 
-for i, data in enumerate(collector):
-    rb.extend(data)
-    max_length = rb[:]["next", "step_count"].max()
-    if len(rb) > INIT_RAND_STEPS:
-        for _ in range(OPTIM_STEPS):
-            
-            batch = rb.sample(128)
-            batch = TensorDict(batch, batch_size=[128])
-            loss_dict = loss(batch)
-            optim.zero_grad()
-            loss_dict["loss"].backward()
-            optim.step()
-            # Update exploration factor
-            exploration_module.step(data.numel())
-            updater.step()
+# for i, data in enumerate(collector):
+#     rb.extend(data)
+#     if len(rb) > INIT_RAND_STEPS:
+#         for _ in range(OPTIM_STEPS):
+#             batch = rb.sample(128)
+#             loss_dict = loss(batch)
+#             optim.zero_grad()
+#             loss_dict["loss"].backward()
+#             optim.step()
+#             # Update exploration factor
+#             exploration_module.step(data.numel())
+#             updater.step()
             
             
-            total_count += data.numel()
-            total_episodes += data["done"].sum().item()
-            if (i + 1) % 10 == 0:
-                fps = total_count / (time.time() - t0)
-                print(
-                    f"frames: {total_count}, episodes: {total_episodes}, fps: {fps:.2f}, "
-                    f"loss: {loss_dict['loss'].item():.3f}, "
-                    f"qvalue: {loss_dict['qvalue'].mean().item():.3f}, "
-                    f"policy_loss: {loss_dict['policy_loss'].item():.3f}"
-                )
-                t0 = time.time()
-                total_count = 0
-                total_episodes = 0
-                success_steps.append(data["step_count"][data["done"]].cpu().numpy())
+#             total_count += data.numel()
+#             total_episodes += data["done"].sum().item()
+#             if (i + 1) % 10 == 0:
+#                 fps = total_count / (time.time() - t0)
+#                 print(
+#                     f"frames: {total_count}, episodes: {total_episodes}, fps: {fps:.2f}, "
+#                     f"loss: {loss_dict['loss'].item():.3f}, "
+#                     f"qvalue: {loss_dict['qvalue'].mean().item():.3f}, "
+#                     f"policy_loss: {loss_dict['policy_loss'].item():.3f}"
+#                 )
+#                 t0 = time.time()
+#                 total_count = 0
+#                 total_episodes = 0
+#                 success_steps.append(data["step_count"][data["done"]].cpu().numpy())
 
-                # plot the q values over the episodes
-                plt.plot([loss_dict['qvalue'].mean().item()] * len(success_steps), color='r')
-        success_steps.append(max_length)
+#                 # plot the q values over the episodes
+#                 plt.plot([loss_dict['qvalue'].mean().item()] * len(success_steps), color='r')
+#         success_steps.append(max_length)
 
-    if total_count > 0 and total_count % LOG_EVERY == 0:
-        torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(rb)}, Number of episodes: {total_episodes}")
+#     if total_count > 0 and total_count % LOG_EVERY == 0:
+#         torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(rb)}, Number of episodes: {total_episodes}")
 
-    if max_length > 475:
-        print("TRAINING COMPLETE")
-        break
+#     if max_length > 475:
+#         print("TRAINING COMPLETE")
+#         break
 
-plt.figure(figsize=(10,5))
-plt.title("QValues per episode")
-plt.xlabel("QValues")
-plt.ylabel("Steps")
-plt.show()
+# plt.figure(figsize=(10,5))
+# plt.title("QValues per episode")
+# plt.xlabel("QValues")
+# plt.ylabel("Steps")
+# plt.show()
 
