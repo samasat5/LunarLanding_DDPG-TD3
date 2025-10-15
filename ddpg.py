@@ -153,7 +153,9 @@ for i, data in enumerate(collector): # runs through the data collected from the 
     replay_buffer.extend(data) # add data to the replay buffer
     max_length = replay_buffer[:]["next", "step_count"].max()
     # pdb.set_trace()
-    if len(replay_buffer) <= INIT_RAND_STEPS: continue
+    if len(replay_buffer) <= INIT_RAND_STEPS: 
+        pbar.update(data.numel())
+        continue
     for _ in range(OPTIM_STEPS):
         # if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
         #     break
