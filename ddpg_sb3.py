@@ -2,7 +2,8 @@ import gymnasium as gym
 import numpy as np
 from stable_baselines3 import DDPG
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
-
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.logger import configure
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
@@ -25,7 +26,8 @@ eval_env = Monitor(gym.make("LunarLanderContinuous-v3"))
 env.reset(seed=0)
 eval_env.reset(seed=0)
 
-
+check_env_specs(env)
+check_env_specs(eval_env)
 
 # The noise objects for DDPG
 n_actions = env.action_space.shape[-1]
@@ -39,6 +41,8 @@ action_noise = NormalActionNoise(
 #     sigma=0.2 * np.ones(n_actions),
 #     theta=0.15
 # )
+
+logger = configure("./logs_ddpg/", ["stdout", "csv", "tensorboard"])
 
 model = DDPG(
     policy="MlpPolicy", 
