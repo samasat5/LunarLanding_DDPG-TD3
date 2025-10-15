@@ -41,6 +41,15 @@ action_noise = NormalActionNoise(
 # )
 
 logger = configure("./logs_ddpg/", ["stdout", "csv", "tensorboard"])
+eval_callback = EvalCallback(
+    eval_env,
+    best_model_save_path="./ddpg_best",
+    log_path="./ddpg_eval",
+    eval_freq=EVAL_EVERY,
+    n_eval_episodes=EVAL_EPISODES,
+    deterministic=True,
+    render=False,
+)
 
 model = DDPG(
     policy="MlpPolicy", 
@@ -61,19 +70,9 @@ model = DDPG(
     policy_kwargs=dict(net_arch=[MLP_SIZE, MLP_SIZE]),
 )
 model.set_logger(logger)
-model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY) # train the agent
+model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY, callback=eval_callback) # train the agent
 model.save("ddpg_lunarlander")
 vec_env = model.get_env() # returns the correct environment
-
-eval_callback = EvalCallback(
-    eval_env,
-    best_model_save_path="./ddpg_best",
-    log_path="./ddpg_eval",
-    eval_freq=EVAL_EVERY,
-    n_eval_episodes=EVAL_EPISODES,
-    deterministic=True,
-    render=False,
-)
 
 
 model = DDPG.load("ddpg_lunarlander")
