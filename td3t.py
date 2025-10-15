@@ -90,6 +90,26 @@ actor_target = deepcopy(actor_net) # no noise in target
 critic_1_target = deepcopy(critic_net_1)
 critic_2_target = deepcopy(critic_net_2)
 
+
+# TD3 Loss
+# 4. DDPG loss module
+# --- 4) Warm-up forward to initialize lazy modules BEFORE loss/opt
+with torch.no_grad():
+    td0 = env.reset()          # has "observation"
+    _ = policy(td0.clone())    # init actor
+    td1 = td0.clone()
+    td1["action"] = env.action_spec.rand(td1.batch_size)
+    _ = critic_net_1(td1)            # init critic
+    _ = critic_net_2(td1)            # init critic
+
+loss = TD3Loss(
+    actor_network=actor_net,    
+    qvalue_network=[critic_net_1, critic_net_2],   
+    action_spec=env.action_spec,       
+)
+loss.make_value_estimator(gamma=GAMMA)
+updater = SoftUpdate(loss, tau=TAU) # for updating target networks
+
 # Collect the data from the agent’s interactions with the environment
 collector = SyncDataCollector(
     env,
@@ -110,53 +130,6 @@ optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
 optim_critic_1 = optim.Adam(critic_net_1.parameters(), lr=1e-3)
 optim_critic_2 = optim.Adam(critic_net_2.parameters(), lr=1e-3)
 
-
-# # test
-# # Test forward with dummy batch
-# dummy_obs = torch.randn(10, obs_dim)  # Batch of 10
-# dummy_action = torch.randn(10, act_dim)
-
-# td = TensorDict({
-#     "observation": dummy_obs,
-#     "action": dummy_action
-# }, batch_size=[10])
-
-# pdb.set_trace() 
-# # Forward pass
-# print("Actor output:", actor_net(td)["action"].shape)
-# print("Critic 1 output:", critic_net_1(td)["state_action_value1"].shape)
-# print("Critic 2 output:", critic_net_2(td)["state_action_value2"].shape)
-
-
-print(torchrl.__version__)
-# from torchrl.modules import TensorDictSequential as TDS, CatTensors
-
-# critic_net_1 = TDS(
-#     CatTensors(in_keys=["observation", "action"], out_key="obs_act"),
-#     TDM(critic_mlp_1, in_keys=["obs_act"], out_keys=["state_action_value1"])
-# )
-
-# critic_net_2 = TDS(
-#     CatTensors(in_keys=["observation", "action"], out_key="obs_act"),
-#     TDM(critic_mlp_2, in_keys=["obs_act"], out_keys=["state_action_value2"])
-# )
-
-
-
-# # TD3 Loss
-# loss = TD3Loss(
-#     qvalue_network=(critic_net_1, critic_net_2),  
-#     actor_network=actor_net,           
-# )
-
-
-# # optimizer
-# ALPHA = 1e-3
-# optim = Adam(loss.parameters(), lr=ALPHA)
-
-# # Target network update
-# TAU = 0.01
-# updater = SoftUpdate(loss, tau=TAU) # for updating target networks
 
 # total_count = 0
 # total_episodes = 0
