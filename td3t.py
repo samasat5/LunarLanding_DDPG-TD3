@@ -111,14 +111,25 @@ rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 
 
 
+from torchrl.modules import TensorDictSequential as TDS, CatTensors
 
-
-
-# TD3 Loss
-loss = TD3Loss(
-    qvalue_network=(critic_net_1, critic_net_2),  
-    actor_network=actor_net,           
+critic_net_1 = TDS(
+    CatTensors(in_keys=["observation", "action"], out_key="obs_act"),
+    TDM(critic_mlp_1, in_keys=["obs_act"], out_keys=["state_action_value1"])
 )
+
+critic_net_2 = TDS(
+    CatTensors(in_keys=["observation", "action"], out_key="obs_act"),
+    TDM(critic_mlp_2, in_keys=["obs_act"], out_keys=["state_action_value2"])
+)
+
+
+
+# # TD3 Loss
+# loss = TD3Loss(
+#     qvalue_network=(critic_net_1, critic_net_2),  
+#     actor_network=actor_net,           
+# )
 
 
 # # optimizer
