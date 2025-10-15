@@ -3,6 +3,7 @@ import time
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import torch
+from tqdm import tqdm
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
 from torchrl.collectors import SyncDataCollector
@@ -145,7 +146,9 @@ total_episodes = 0
 t0 = time.time()
 success_steps, qvalues = [], []
 
-# add tqdm
+
+
+pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True)
 for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
     replay_buffer.extend(data) # add data to the replay buffer
     max_length = replay_buffer[:]["next", "step_count"].max()
