@@ -92,6 +92,10 @@ critic_mlp = MLP(
     activate_last_layer=False
 )
 critic = TDM(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
+observation_example = torch.randn( obs_dim) 
+action_example = torch.randn( act_dim)  
+input_data = {'observation': observation_example, 'action': action_example}
+pdb.set_trace()
 
 # Target Networks
 actor_target = deepcopy(actor) # no noise in target
