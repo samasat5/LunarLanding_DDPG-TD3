@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-
-# Critic class
 class Critic(nn.Module):
     def __init__(self, obs_dim, act_dim, hidden_size=256):
         super(Critic, self).__init__()
@@ -10,14 +8,22 @@ class Critic(nn.Module):
         self.output_fc = nn.Linear(hidden_size, 1)
 
     def forward(self, observation, action):
-        # Process observation and action separately
         obs_out = torch.relu(self.obs_fc(observation))
         act_out = torch.relu(self.act_fc(action))
-
-        # Combine the outputs
-        combined = obs_out + act_out  # You can also concatenate, etc.
-        
-        # Output the state-action value
+        combined = obs_out + act_out 
         state_action_value = self.output_fc(combined)
         return state_action_value
 
+
+class Actor(nn.Module):
+    def __init__(self, obs_dim, act_dim, hidden_size=256):
+        super(Actor, self).__init__()
+        self.fc = nn.Linear(obs_dim, hidden_size)
+        self.mu_fc = nn.Linear(hidden_size, act_dim)
+        self.log_std_fc = nn.Linear(hidden_size, act_dim)
+    def forward(self, observation):
+        x = torch.relu(self.fc(observation))
+        mu = self.mu_fc(x)
+        log_std = self.log_std_fc(x)
+        std = torch.exp(log_std)
+        return mu, std
