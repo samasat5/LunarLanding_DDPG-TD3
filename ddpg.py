@@ -127,7 +127,7 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
     env,
     rollout_policy,
     frames_per_batch=FRAMES_PER_BATCH,
-    total_frames=TOTAL_FRAMES, # how many timesteps to run the agent
+    total_frames=TOTAL_FRAMES, # how many timesteps to run the agent, If the total_frames is not divisible by frames_per_batch, an exception is raised.
     device=DEVICE,
 )
 
