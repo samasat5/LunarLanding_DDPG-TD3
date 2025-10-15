@@ -1,8 +1,9 @@
 import time
 import pdb
 import matplotlib.pyplot as plt
+from tensordict import TensorDict
 from torchrl.envs import GymEnv, StepCounter, TransformedEnv
-from tensordict.nn import TensorDictModule , TensorDictSequential as Seq
+from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
 from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP, EGreedyModule
 from torchrl.objectives import DQNLoss, SoftUpdate, DDPGLoss,TD3Loss
 from torchrl.collectors import SyncDataCollector
@@ -13,7 +14,6 @@ import torch
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
 from torchrl.envs.utils import check_env_specs
-from utils2 import Critic, Actor
 
 
 # Environment
@@ -39,17 +39,46 @@ act_dim = env.action_spec.shape[-1] #action_spec : the action space
 
 # Critic
 MLP_SIZE = 256
-critic_mlp_1 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE],)
-critic_net_1 = Critic(critic_mlp_1, obs_dim=8, act_dim=2) 
-critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
-critic_net_2 = Critic(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value"])      
+critic_mlp_1 = MLP(
+    out_features=1, 
+    num_cells=[MLP_SIZE, MLP_SIZE],
+    activation_class=nn.ReLU,
+    activate_last_layer=False
+)
+critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
+# qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
+observation_example = torch.randn( obs_dim) 
+action_example = torch.randn( act_dim)  
+input_data = TensorDict({'observation': observation_example, 'action': action_example})
+pdb.set_trace()
 
-#  Actor
-actor_mlp = MLP(
-    out_features=act_dim, 
-    num_cells=[MLP_SIZE, MLP_SIZE], )
+# critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
+# critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value"])      
+# # qvalue_2 = QValueModule(critic_net_2, spec=env.action_spec)  
+# qvalue_2 = critic_net_2
 
-actor_net = Actor(actor_mlp, in_keys=["observation"], out_keys=["action"])
+
+
+# Define your observation and action example tensors
+
+
+
+critic_output_1 = critic_net_1(input_data)
+print(f"Critic 1 output shape: {critic_output_1['state_action_value'].shape}")
+print(f"Critic 1 output: {critic_output_1['state_action_value']}")
+
+
+# print(f"Critic 2 input shape (observation, action): {observation_example.shape}, {action_example.shape}")
+# critic_output_2 = critic_net_2({'observation': observation_example, 'action': action_example})
+# print(f"Critic 2 output shape: {critic_output_2['state_action_value'].shape}")
+
+
+# #  Actor
+# actor_mlp = MLP(
+#     out_features=act_dim, 
+#     num_cells=[MLP_SIZE, MLP_SIZE], )
+
+# actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action"])
 
 
 
