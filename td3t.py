@@ -34,13 +34,16 @@ check_env_specs(env)
 
 obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
 act_dim = env.action_spec.shape[-1] #action_spec : the action space
-max_action = env.action_spec.space.high[0].item()
-min_action = env.action_spec.space.low[0].item()
 
 
 # Critic
 MLP_SIZE = 256
-critic_mlp_1 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
+critic_mlp_1 = MLP(
+    out_features=1, 
+    num_cells=[MLP_SIZE, MLP_SIZE],
+    activation_class=nn.ReLU,
+    activate_last_layer=False
+)
 critic_net_1 = TensorDictModule(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
 # qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
 observation_example = torch.randn( obs_dim) 
