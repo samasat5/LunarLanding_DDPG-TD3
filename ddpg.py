@@ -130,7 +130,7 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
     total_frames=TOTAL_FRAMES, # how many timesteps to run the agent, If the total_frames is not divisible by frames_per_batch, an exception is raised.
     device=DEVICE,
     replay_buffer=replay_buffer,
-    extend_buffer=True, #?
+    extend_buffer=False, # =(env.step -> transition -> immediately added to replay_buffer)
 )
 
 # 7. Optimizers
@@ -145,7 +145,6 @@ success_steps, qvalues = [], []
 
 # add tqdm
 for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
-    replay_buffer.extend(data)
     max_length = replay_buffer[:]["next", "step_count"].max()
     # pdb.set_trace()
     if len(replay_buffer) > INIT_RAND_STEPS:
