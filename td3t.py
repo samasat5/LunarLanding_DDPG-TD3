@@ -26,7 +26,7 @@ min_action = env.action_spec.space.low[0]
 # pdb.set_trace()
 
 # Critic
-MLP_SIZE = 64
+MLP_SIZE = 256
 critic_mlp_1 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
 critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
 # qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
