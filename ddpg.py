@@ -147,36 +147,36 @@ success_steps, qvalues = [], []
 for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
     max_length = replay_buffer[:]["next", "step_count"].max()
     # pdb.set_trace()
-    #if len(replay_buffer) > INIT_RAND_STEPS:
-    for _ in range(OPTIM_STEPS):
-        # if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
-        #     break
-        td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
+    if len(replay_buffer) > INIT_RAND_STEPS:
+        for _ in range(OPTIM_STEPS):
+            # if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
+            #     break
+            td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
 
-        # Critic update
-        optim_critic.zero_grad(set_to_none=True)
-        loss_q = loss(td)["loss_value"]
-        loss_q.backward()
-        optim_critic.step()
-        updater.step()
+            # Critic update
+            optim_critic.zero_grad(set_to_none=True)
+            loss_q = loss(td)["loss_value"]
+            loss_q.backward()
+            optim_critic.step()
+            updater.step()
 
-        # Actor update (freeze critic params or detach inside loss)
-        for p in critic.parameters(): p.requires_grad = False
-        optim_actor.zero_grad(set_to_none=True)
-        loss_pi = loss(td)["loss_actor"]
-        loss_pi.backward()
-        optim_actor.step()
-        updater.step()
-        for p in critic.parameters(): p.requires_grad = True
+            # Actor update (freeze critic params or detach inside loss)
+            for p in critic.parameters(): p.requires_grad = False
+            optim_actor.zero_grad(set_to_none=True)
+            loss_pi = loss(td)["loss_actor"]
+            loss_pi.backward()
+            optim_actor.step()
+            updater.step()
+            for p in critic.parameters(): p.requires_grad = True
 
-        # Update target params
-        updater.step()
-        #pdb.set_trace()
+            # Update target params
+            updater.step()
+            pdb.set_trace()
 
-        total_count += data.numel()
-        total_episodes += data["next", "done"].sum()
-        qvalues.append(loss(td)["loss_value"].item()) # loss_q or loss(td)
-    success_steps.append(max_length)
+            total_count += data.numel()
+            total_episodes += data["next", "done"].sum()
+            qvalues.append(loss(td)["loss_value"].item()) # loss_q or loss(td)
+        success_steps.append(max_length)
 
     if total_count % LOG_EVERY == 0:
         torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
