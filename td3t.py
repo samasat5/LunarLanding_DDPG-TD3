@@ -93,7 +93,7 @@ rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 
 # TD3 Loss
 loss = TD3Loss(
-    qvalue_network=(qvalue_1, qvalue_2),  
+    qvalue_network=(critic_net_1, critic_net_2),  
     actor_network=actor_net,           
 )
 
