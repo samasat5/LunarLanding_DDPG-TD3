@@ -149,8 +149,8 @@ for i, data in enumerate(collector): # runs through the data collected from the 
     # pdb.set_trace()
     if len(replay_buffer) > INIT_RAND_STEPS:
         for _ in range(OPTIM_STEPS):
-            # if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
-            #     break
+            if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
+                break
             td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
 
             # Critic update
