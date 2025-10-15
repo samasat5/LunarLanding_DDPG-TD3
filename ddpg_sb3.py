@@ -20,7 +20,12 @@ EVAL_EPISODES = 3
 DEVICE = "auto" 
 
 
-env = gym.make("LunarLanderContinuous-v3")
+env = Monitor(gym.make("LunarLanderContinuous-v3"))
+eval_env = Monitor(gym.make("LunarLanderContinuous-v3"))
+env.reset(seed=0)
+eval_env.reset(seed=0)
+
+
 
 # The noise objects for DDPG
 n_actions = env.action_space.shape[-1]
@@ -28,6 +33,12 @@ action_noise = NormalActionNoise(
     mean=np.zeros(n_actions), 
     sigma=0.1 * np.ones(n_actions)
 )
+# OU noise (often good for DDPG)
+# action_noise = OrnsteinUhlenbeckActionNoise(
+#     mean=np.zeros(n_actions),
+#     sigma=0.2 * np.ones(n_actions),
+#     theta=0.15
+# )
 
 model = DDPG(
     policy="MlpPolicy", 
@@ -47,7 +58,7 @@ model = DDPG(
     learning_starts=INIT_RAND_STEPS,
     policy_kwargs=dict(net_arch=[MLP_SIZE, MLP_SIZE]),
 )
-
+model.set_logger(logger)
 model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY)
 model.save("ddpg_lunarlander")
 vec_env = model.get_env() # returns the correct environment
