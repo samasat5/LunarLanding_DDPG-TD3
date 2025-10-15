@@ -128,7 +128,7 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
     rollout_policy,
     frames_per_batch=FRAMES_PER_BATCH,
     total_frames=TOTAL_FRAMES, # how many timesteps to run the agent, If the total_frames is not divisible by frames_per_batch, an exception is raised.
-    init_random_frames=INIT_RAND_STEPS, # number of initial random steps to populate the replay buffer before training begins
+    init_random_frames=INIT_RAND_STEPS, # number of initial random steps to populate the replay buffer before training begins, #if len(replay_buffer) > INIT_RAND_STEPS:
     device=DEVICE,
     # replay_buffer=replay_buffer,
     # extend_buffer=False, # =(env.step -> transition -> immediately added to replay_buffer)
@@ -149,7 +149,6 @@ for i, data in enumerate(collector): # runs through the data collected from the 
     replay_buffer.extend(data) # add data to the replay buffer
     max_length = replay_buffer[:]["next", "step_count"].max()
     # pdb.set_trace()
-    #if len(replay_buffer) > INIT_RAND_STEPS:
     for _ in range(OPTIM_STEPS):
         # if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
         #     break
