@@ -55,6 +55,17 @@ exploration_module = OUNoise(
 )
 policy = Seq(actor_net, exploration_module)
 
+
+
+with torch.no_grad():
+    td0 = env.reset()          # has "observation"
+    _ = policy(td0.clone())    # init actor
+    td1 = td0.clone()
+    td1["action"] = env.action_spec.rand(td1.batch_size)
+    _ = critic(td1)            # init critic
+
+
+
 # Collect the data from the agent’s interactions with the environment
 collector = SyncDataCollector(
     env,
