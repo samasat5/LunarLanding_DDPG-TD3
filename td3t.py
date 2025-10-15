@@ -138,7 +138,7 @@ collector = SyncDataCollector(
 )
 
 # Replay buffer
-rb = ReplayBuffer(
+replay_buffer = ReplayBuffer(
     storage=LazyTensorStorage(BUFFER_LEN),
     sampler=RandomSampler(),
 )
@@ -151,7 +151,7 @@ optim_critic_2 = optim.Adam(critic_net_2.parameters(), lr=1e-3)
 total_count = 0
 total_episodes = 0
 t0 = time.time()
-success_steps = []
+success_steps, qvalues = []
 
 # add tqdm
 for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
@@ -165,22 +165,30 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
 
         # Critic update
-        optim_critic.zero_grad(set_to_none=True)
+        optim_critic_1.zero_grad(set_to_none=True)
         loss_q = loss(td)["loss_value"]
         loss_q.backward()
-        optim_critic.step()
+        optim_critic_1.step()
+        updater.step()
+
+        optim_critic_2.zero_grad(set_to_none=True)
+        loss_q = loss(td)["loss_value"]
+        loss_q.backward()
+        optim_critic_2.step()
         updater.step()
 
         # Actor update (freeze critic params or detach inside loss)
-        for p in critic.parameters(): p.requires_grad = False
+        for p in critic_net_1.parameters(): p.requires_grad = False
+        for p in critic_net_2.parameters(): p.requires_grad = False
         optim_actor.zero_grad(set_to_none=True)
         loss_pi = loss(td)["loss_actor"]
         loss_pi.backward()
         optim_actor.step()
         updater.step()
-        for p in critic.parameters(): p.requires_grad = True
+        for p in critic_net_1.parameters(): p.requires_grad = True
+        for p in critic_net_2.parameters(): p.requires_grad = True
 
-        ou_noise.step(data.numel()) # make the noise decay over time
+        exploration_module.step(data.numel()) # make the noise decay over time
 
         # Update target params
         updater.step()
