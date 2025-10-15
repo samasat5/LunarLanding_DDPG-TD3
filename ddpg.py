@@ -74,7 +74,7 @@ actor_mlp = MLP(
 actor = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_raw"])
 # Wrap Tanh so it applies to the "action" tensor 
 tanh_on_action = TDM(nn.Tanh(), in_keys=["action_raw"], out_keys=["action"])
-policy = Seq(actor, tanh_on_action, out_keys=["action"])   # final tanh ensures [-1, 1] range
+policy = Seq(actor, tanh_on_action, selected_out_keys=["action"])   # final tanh ensures [-1, 1] range
 ou_noise = OUNoise(
     spec=env.action_spec,
     theta=0.15,
