@@ -214,7 +214,7 @@ torchrl_logger.info(
 
 plt.figure(figsize=(10,5))
 plt.title("QValues per episode")
-plt.xlabel("QValues")
-plt.ylabel("Steps")
+plt.xlabel("Steps")
+plt.ylabel("QValues")
 plt.plot(qvalues)
 plt.show()
