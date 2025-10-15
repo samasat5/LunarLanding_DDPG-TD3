@@ -187,10 +187,18 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         total_episodes += data["next", "done"].sum()
         qvalues.append(loss(td)["loss_value"].item()) # loss_q or loss(td)
     success_steps.append(max_length)
+    total_count += data.numel()
+    total_episodes += data["next", "done"].sum().item()
+    pbar.set_postfix({
+        "Steps": total_count,
+        "Episodes": total_episodes,
+        "Mean Q": f"{torch.tensor(qvalues[-50:]).mean().item():.2f}"
+    })
+    pbar.update(data.numel())
 
     if total_count % LOG_EVERY == 0:
-        torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
-    
+        torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
+        # torchrl_logger.info(f"Steps: {total_count}, Episodes: {total_episodes}, Max Ep Len: {max_length}, ReplayBuffer: {len(replay_buffer)}, Q: {torch.tensor(qvalues[-50:]).item():.3f} [END]")
     if total_count % EVAL_EVERY < FRAMES_PER_BATCH: # A vérifier
         policy.eval()
         with torch.no_grad():
@@ -211,7 +219,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
             torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
         policy.train()
 
-
+pbar.close()
 t1 = time.time()
 print(f"Training took {t1-t0:.2f}s")
 torchrl_logger.info(
