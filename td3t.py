@@ -43,7 +43,9 @@ MLP_SIZE = 256
 critic_mlp_1 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
 critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
 # qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
-qvalue_1 = critic_net_1
+observation_example = torch.randn(1, obs_dim) 
+action_example = torch.randn(1, act_dim)  
+pdb.set_trace()
 
 # critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
 # critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value"])      
@@ -53,8 +55,6 @@ qvalue_1 = critic_net_1
 
 
 # Define your observation and action example tensors
-observation_example = torch.randn(1, obs_dim) 
-action_example = torch.randn(1, act_dim)  
 
 input_data = {'observation': observation_example, 'action': action_example}
 
