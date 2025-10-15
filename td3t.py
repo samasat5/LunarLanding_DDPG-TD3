@@ -123,6 +123,7 @@ for i, data in enumerate(collector):
         for _ in range(OPTIM_STEPS):
             
             batch = rb.sample(128)
+            batch = TensorDict(batch, batch_size=[128])
             loss_dict = loss(batch)
             optim.zero_grad()
             loss_dict["loss"].backward()
