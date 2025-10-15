@@ -129,6 +129,8 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
     frames_per_batch=FRAMES_PER_BATCH,
     total_frames=TOTAL_FRAMES, # how many timesteps to run the agent, If the total_frames is not divisible by frames_per_batch, an exception is raised.
     device=DEVICE,
+    replay_buffer=replay_buffer,
+    extend_buffer=True, #?
 )
 
 # 7. Optimizers
