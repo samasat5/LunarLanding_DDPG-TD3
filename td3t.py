@@ -48,8 +48,7 @@ critic_net_1 = TensorDictModule(critic_mlp_1, in_keys=["observation", "action"],
 # qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
 observation_example = torch.randn( obs_dim) 
 action_example = torch.randn( act_dim)  
-print(f"Observation shape: {observation_example.shape}")
-print(f"Action shape: {action_example.shape}")
+input_data = {'observation': observation_example, 'action': action_example}
 pdb.set_trace()
 
 # critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
