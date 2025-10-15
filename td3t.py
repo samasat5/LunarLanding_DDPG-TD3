@@ -37,53 +37,65 @@ critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["s
 # qvalue_2 = QValueModule(critic_net_2, spec=env.action_spec)  
 qvalue_2 = critic_net_2
 
-#  Actor
-actor_mlp = MLP(
-    out_features=act_dim, 
-    num_cells=[MLP_SIZE, MLP_SIZE], )
 
-actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action"])
+observation_example = torch.randn(1, obs_dim) 
+action_example = torch.randn(1, act_dim)  
+print(f"Critic 1 input shape (observation, action): {observation_example.shape}, {action_example.shape}")
+critic_output_1 = critic_net_1({'observation': observation_example, 'action': action_example})
+print(f"Critic 1 output shape: {critic_output_1['state_action_value'].shape}")
 
-
-
-EPS_0 = 0.2
-exploration_module = OUNoise(
-    spec=env.action_spec,
-    theta=0.15,
-    sigma=0.2,
-    dt=1e-2,
-)
-policy = Seq(actor_net, exploration_module)
+print(f"Critic 2 input shape (observation, action): {observation_example.shape}, {action_example.shape}")
+critic_output_2 = critic_net_2({'observation': observation_example, 'action': action_example})
+print(f"Critic 2 output shape: {critic_output_2['state_action_value'].shape}")
 
 
+# #  Actor
+# actor_mlp = MLP(
+#     out_features=act_dim, 
+#     num_cells=[MLP_SIZE, MLP_SIZE], )
 
-# Collect the data from the agent’s interactions with the environment
-collector = SyncDataCollector(
-    env,
-    policy,
-    total_frames=10000,
-    frames_per_batch=1000,
-    device="cpu",
-)
-
-# Replay buffer
-BUFFER_LEN = 100000
-rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
-
-# TD3 Loss
-loss = TD3Loss(
-    qvalue_network=(qvalue_1, qvalue_2),  
-    actor_network=actor_net,           
-)
+# actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action"])
 
 
-# optimizer
-ALPHA = 1e-3
-optim = Adam(loss.parameters(), lr=ALPHA)
 
-# Target network update
-TAU = 0.01
-updater = SoftUpdate(loss, tau=TAU) # for updating target networks
+# EPS_0 = 0.2
+# exploration_module = OUNoise(
+#     spec=env.action_spec,
+#     theta=0.15,
+#     sigma=0.2,
+#     dt=1e-2,
+# )
+# policy = Seq(actor_net, exploration_module)
+
+
+
+# # Collect the data from the agent’s interactions with the environment
+# collector = SyncDataCollector(
+#     env,
+#     policy,
+#     total_frames=10000,
+#     frames_per_batch=1000,
+#     device="cpu",
+# )
+
+# # Replay buffer
+# BUFFER_LEN = 100000
+# rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
+
+# # TD3 Loss
+# loss = TD3Loss(
+#     qvalue_network=(qvalue_1, qvalue_2),  
+#     actor_network=actor_net,           
+# )
+
+
+# # optimizer
+# ALPHA = 1e-3
+# optim = Adam(loss.parameters(), lr=ALPHA)
+
+# # Target network update
+# TAU = 0.01
+# updater = SoftUpdate(loss, tau=TAU) # for updating target networks
 
 # total_count = 0
 # total_episodes = 0
