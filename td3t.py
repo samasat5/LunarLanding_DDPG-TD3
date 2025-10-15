@@ -122,7 +122,7 @@ loss = TD3Loss(
     action_spec=env.action_spec,       
     loss_function="l2",
     delay_actor=True,            
-    delay_value=True, 
+    delay_qvalue=True, 
 )
 loss.make_value_estimator(gamma=GAMMA)
 updater = SoftUpdate(loss, tau=TAU) # for updating target networks
