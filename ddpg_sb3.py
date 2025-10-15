@@ -4,6 +4,7 @@ from stable_baselines3 import DDPG
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
+from stable_baselines3.common.callbacks import EvalCallback
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
@@ -67,7 +68,16 @@ model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY)
 model.save("ddpg_lunarlander")
 vec_env = model.get_env() # returns the correct environment
 
-del model # remove to demonstrate saving and loading
+eval_callback = EvalCallback(
+    eval_env,
+    best_model_save_path="./ddpg_best",
+    log_path="./ddpg_eval",
+    eval_freq=EVAL_EVERY,
+    n_eval_episodes=EVAL_EPISODES,
+    deterministic=True,
+    render=False,
+)
+
 
 model = DDPG.load("ddpg_lunarlander")
 episodes = 10
