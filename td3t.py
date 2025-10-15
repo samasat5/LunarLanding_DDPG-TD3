@@ -34,8 +34,6 @@ check_env_specs(env)
 
 obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
 act_dim = env.action_spec.shape[-1] #action_spec : the action space
-max_action = env.action_spec.space.high[0].item()
-min_action = env.action_spec.space.low[0].item()
 
 
 # Critic
