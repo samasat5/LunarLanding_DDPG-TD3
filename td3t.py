@@ -68,7 +68,6 @@ collector = SyncDataCollector(
 BUFFER_LEN = 100000
 rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 
-pdb.set_trace()
 # TD3 Loss
 loss = TD3Loss(
     qvalue_network=(qvalue_1, qvalue_2),  
