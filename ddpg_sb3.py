@@ -6,7 +6,7 @@ from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckA
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 50_000
+TOTAL_FRAMES = 100_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -24,7 +24,10 @@ env = gym.make("LunarLanderContinuous-v3")
 
 # The noise objects for DDPG
 n_actions = env.action_space.shape[-1]
-action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+action_noise = NormalActionNoise(
+    mean=np.zeros(n_actions), 
+    sigma=0.1 * np.ones(n_actions)
+)
 
 model = DDPG(
     "MlpPolicy", 
@@ -39,12 +42,11 @@ model = DDPG(
     gamma=GAMMA,
     device=DEVICE,
     action_noise=action_noise,
-    
 )
 
-model.learn(total_timesteps=100_000, log_interval=10_000)
+model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY)
 model.save("ddpg_lunarlander")
-vec_env = model.get_env()
+vec_env = model.get_env() # returns the correct environment
 
 del model # remove to demonstrate saving and loading
 
