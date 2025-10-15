@@ -50,7 +50,7 @@ critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["s
 observation_example = torch.randn( obs_dim) 
 action_example = torch.randn( act_dim)  
 input_data = TensorDict({'observation': observation_example, 'action': action_example})
-pdb.set_trace()
+
 
 # critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
 # critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value"])      
