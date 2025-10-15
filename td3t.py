@@ -42,6 +42,7 @@ qvalue_1 = critic_net_1
 # Define your observation and action example tensors
 observation_example = torch.randn(1, obs_dim) 
 action_example = torch.randn(1, act_dim)  
+
 input_data = {'observation': observation_example, 'action': action_example}
 
 critic_output_1 = critic_net_1(input_data)
