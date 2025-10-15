@@ -140,6 +140,8 @@ total_count = 0
 total_episodes = 0
 t0 = time.time()
 success_steps, qvalues = [], []
+
+# add tqdm
 for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
     replay_buffer.extend(data)
     max_length = replay_buffer[:]["next", "step_count"].max()
