@@ -63,16 +63,8 @@ critic_mlp_1 = MLP(
     activate_last_layer=False
 )
 critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value1"]) 
-# # qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
-# observation_example = torch.randn( obs_dim) 
-# action_example = torch.randn( act_dim)  
-# input_data = TensorDict({'observation': observation_example, 'action': action_example})
-
-
 critic_mlp_2 = deepcopy(critic_mlp_1)
 critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value2"])      
-# # qvalue_2 = QValueModule(critic_net_2, spec=env.action_spec)  
-# qvalue_2 = critic_net_2
 
 
 #  Actor
@@ -85,7 +77,6 @@ actor_mlp = MLP(
 actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_raw"])
 tanh_on_action = TDM(nn.Tanh(), in_keys=["action_raw"], out_keys=["action"])
 policy = Seq(actor_net, tanh_on_action, selected_out_keys=["action"])   # final tanh ensures [-1, 1] range
-
 exploration_module = OUNoise(
     spec=env.action_spec,
     theta=0.15,
@@ -116,7 +107,8 @@ rb = ReplayBuffer(
 )
 
 optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
-optim_critic = optim.Adam(critic_net_1.parameters(), lr=1e-3)
+optim_critic_1 = optim.Adam(critic_net_1.parameters(), lr=1e-3)
+optim_critic_2 = optim.Adam(critic_net_2.parameters(), lr=1e-3)
 
 
 # # test
