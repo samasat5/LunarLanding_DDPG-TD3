@@ -1,13 +1,44 @@
 import torch
 import torch.nn as nn
 from torchrl.objectives import SoftUpdate
+from tensordict import TensorDict
+
+
+
+class QValueEnsembleModule(nn.Module):
+    """
+    Wraps two TensorDictModules (critic_net_1, critic_net_2) into a single module
+    that returns a TensorDict containing both outputs and exposes in_keys.
+    """
+    def __init__(self, q1, q2):
+        super().__init__()
+        self.q1 = q1
+        self.q2 = q2
+        self.in_keys = getattr(q1, "in_keys", getattr(q1, "_in_keys", None))
+        if getattr(self, "_in_keys", None) is None:
+            self._in_keys = getattr(self, "in_keys", None)
+
+    def forward(self, tensordict):
+        # Ensure we don't mutate the incoming tensordict unexpectedly
+        td1 = self.q1(tensordict.clone())
+        td2 = self.q2(tensordict.clone())
+        q1_val = td1.get("state_action_value1")
+        q2_val = td2.get("state_action_value2")
+
+        # Sanity check
+        if q1_val is None or q2_val is None:
+            raise KeyError(
+                f"Critic outputs missing 'state_action_value': got {list(td1.keys())}, {list(td2.keys())}"
+            )
+        # Merge
+        td = TensorDict({}, batch_size=tensordict.batch_size)
+        td["state_action_value"] = torch.min(q1_val, q2_val)
+        return td
 
 def soft_update(target_network, source_network, tau):
     """Soft update the target network using Polyak averaging."""
     for target_param, source_param in zip(target_network.parameters(), source_network.parameters()):
         target_param.data.copy_(tau * source_param.data + (1.0 - tau) * target_param.data)
-
-
 
 class MultiCriticSoftUpdate(SoftUpdate):
     def __init__(self, loss_module, tau: float):
@@ -26,37 +57,3 @@ class MultiCriticSoftUpdate(SoftUpdate):
 
 
 
-
-
-
-
-
-
-
-class Critic(nn.Module):
-    def __init__(self, obs_dim, act_dim, hidden_size=256):
-        super(Critic, self).__init__()
-        self.obs_fc = nn.Linear(obs_dim, hidden_size)
-        self.act_fc = nn.Linear(act_dim, hidden_size)
-        self.output_fc = nn.Linear(hidden_size, 1)
-
-    def forward(self, observation, action):
-        obs_out = torch.relu(self.obs_fc(observation))
-        act_out = torch.relu(self.act_fc(action))
-        combined = obs_out + act_out 
-        state_action_value = self.output_fc(combined)
-        return state_action_value
-
-
-class Actor(nn.Module):
-    def __init__(self, obs_dim, act_dim, hidden_size=256):
-        super(Actor, self).__init__()
-        self.fc = nn.Linear(obs_dim, hidden_size)
-        self.mu_fc = nn.Linear(hidden_size, act_dim)
-        self.log_std_fc = nn.Linear(hidden_size, act_dim)
-    def forward(self, observation):
-        x = torch.relu(self.fc(observation))
-        mu = self.mu_fc(x)
-        log_std = self.log_std_fc(x)
-        std = torch.exp(log_std)
-        return mu, std

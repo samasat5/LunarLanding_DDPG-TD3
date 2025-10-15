@@ -17,9 +17,20 @@ import torch
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
 from torchrl.envs.utils import check_env_specs
-from utils2 import MultiCriticSoftUpdate, soft_update
+from utils2 import MultiCriticSoftUpdate, soft_update, QValueEnsembleModule
 from tqdm import tqdm
 
+
+
+@torch.no_grad()
+def soft_update(source, target, tau):
+    src_dict = source.state_dict()
+    tgt_dict = target.state_dict()
+    for key in src_dict:
+        tgt_dict[key] = tau * src_dict[key] + (1 - tau) * tgt_dict[key]
+    target.load_state_dict(tgt_dict)
+    
+    
 # configurations
 INIT_RAND_STEPS = 5000 
 TOTAL_FRAMES = 50_000
@@ -126,40 +137,7 @@ critic_2_target = deepcopy(critic_net_2)
 
 
 
-class QValueEnsembleModule(nn.Module):
-    """
-    Wraps two TensorDictModules (critic_net_1, critic_net_2) into a single module
-    that returns a TensorDict containing both outputs and exposes in_keys.
-    """
-    def __init__(self, q1, q2):
-        super().__init__()
-        self.q1 = q1
-        self.q2 = q2
-        self.in_keys = getattr(q1, "in_keys", getattr(q1, "_in_keys", None))
-        if getattr(self, "_in_keys", None) is None:
-            self._in_keys = getattr(self, "in_keys", None)
-
-    def forward(self, tensordict):
-        # Ensure we don't mutate the incoming tensordict unexpectedly
-        td1 = self.q1(tensordict.clone())
-        td2 = self.q2(tensordict.clone())
-        q1_val = td1.get("state_action_value1")
-        q2_val = td2.get("state_action_value2")
-
-        # Sanity check
-        if q1_val is None or q2_val is None:
-            raise KeyError(
-                f"Critic outputs missing 'state_action_value': got {list(td1.keys())}, {list(td2.keys())}"
-            )
-        # Merge
-        td = TensorDict({}, batch_size=tensordict.batch_size)
-        td["state_action_value"] = torch.min(q1_val, q2_val)
-        return td
-
-
 qvalue_ensemble = QValueEnsembleModule(critic_net_1, critic_net_2)
-
-
 loss = TD3Loss(
     actor_network=Seq(actor_net, tanh_on_action), 
     qvalue_network=qvalue_ensemble,
@@ -169,30 +147,9 @@ loss = TD3Loss(
     delay_qvalue=True,
 )
 
-# print("TD3Loss attributes:", [k for k in dir(loss) if "key" in k])
-# print("Type:", type(loss))
-# print("in_keys value (if exists):", getattr(loss, "_in_keys", None))
-# if getattr(loss, "_in_keys", None) is None:
-#     loss._in_keys = ["observation", "action", "next"]
-# print([k for k in dir(loss) if "target" in k or "actor" in k or "qvalue" in k])
-# # Useful checks:
-# print("has target actor params?", hasattr(loss, "target_actor_network_params"))
-# print("has target qvalue params?", hasattr(loss, "target_qvalue_network_params"))
-# print("Actor params locked?", loss.target_actor_network_params.is_locked)
-# print("Qvalue params locked?\n\n\n", loss.target_qvalue_network_params.is_locked)
 
-@torch.no_grad()
-def soft_update(source, target, tau):
-    src_dict = source.state_dict()
-    tgt_dict = target.state_dict()
-    for key in src_dict:
-        tgt_dict[key] = tau * src_dict[key] + (1 - tau) * tgt_dict[key]
-    target.load_state_dict(tgt_dict)
 
         
-# pdb.set_trace()
-
-
 loss.make_value_estimator(gamma=GAMMA)
 
 # Collect the data from the agent’s interactions with the environment
@@ -222,7 +179,6 @@ t0 = time.time()
 success_steps = []
 qvalues = []
 
-# tqdm progress bar
 num_batches = TOTAL_FRAMES // FRAMES_PER_BATCH
 pbar = tqdm(total=num_batches, desc="Training TD3", dynamic_ncols=True)
 
