@@ -97,13 +97,6 @@ rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 #     qvalue_network=(critic_net_1, critic_net_2),  
 #     actor_network=actor_net,           
 # )
-loss = DDPGLoss(
-    actor_network=policy, # deterministic 
-    value_network=critic_net_1,
-    loss_function="l2",
-    delay_actor=True,            
-    delay_value=True, 
-)
 
 
 # # optimizer
