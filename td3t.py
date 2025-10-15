@@ -93,32 +93,32 @@ rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 
 
 
-# test
-# Test forward with dummy batch
-dummy_obs = torch.randn(10, obs_dim)  # Batch of 10
-dummy_action = torch.randn(10, act_dim)
+# # test
+# # Test forward with dummy batch
+# dummy_obs = torch.randn(10, obs_dim)  # Batch of 10
+# dummy_action = torch.randn(10, act_dim)
 
-td = TensorDict({
-    "observation": dummy_obs,
-    "action": dummy_action
-}, batch_size=[10])
+# td = TensorDict({
+#     "observation": dummy_obs,
+#     "action": dummy_action
+# }, batch_size=[10])
 
-pdb.set_trace() 
-# Forward pass
-print("Actor output:", actor_net(td)["action"].shape)
-print("Critic 1 output:", critic_net_1(td)["state_action_value1"].shape)
-print("Critic 2 output:", critic_net_2(td)["state_action_value2"].shape)
-
-
+# pdb.set_trace() 
+# # Forward pass
+# print("Actor output:", actor_net(td)["action"].shape)
+# print("Critic 1 output:", critic_net_1(td)["state_action_value1"].shape)
+# print("Critic 2 output:", critic_net_2(td)["state_action_value2"].shape)
 
 
 
 
-# # TD3 Loss
-# loss = TD3Loss(
-#     qvalue_network=(critic_net_1, critic_net_2),  
-#     actor_network=actor_net,           
-# )
+
+
+# TD3 Loss
+loss = TD3Loss(
+    qvalue_network=(critic_net_1, critic_net_2),  
+    actor_network=actor_net,           
+)
 
 
 # # optimizer
