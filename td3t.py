@@ -45,7 +45,7 @@ critic_mlp_1 = MLP(
     activation_class=nn.ReLU,
     activate_last_layer=False
 )
-critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
+critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value1"]) 
 # # qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
 # observation_example = torch.randn( obs_dim) 
 # action_example = torch.randn( act_dim)  
@@ -53,7 +53,7 @@ critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["s
 
 
 critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
-critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value"])      
+critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value2"])      
 # # qvalue_2 = QValueModule(critic_net_2, spec=env.action_spec)  
 # qvalue_2 = critic_net_2
 
