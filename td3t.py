@@ -45,6 +45,8 @@ critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["s
 # qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
 observation_example = torch.randn(1, obs_dim) 
 action_example = torch.randn(1, act_dim)  
+print(f"Observation shape: {observation_example.shape}")
+print(f"Action shape: {action_example.shape}")
 pdb.set_trace()
 
 # critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
