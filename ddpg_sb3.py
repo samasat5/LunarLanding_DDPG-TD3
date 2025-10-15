@@ -5,19 +5,19 @@ from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckA
 
 
 # parameters and hyperparameters
-INIT_RAND_STEPS = 5000 
+INIT_RAND_STEPS = 5_000 
 TOTAL_FRAMES = 100_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
-REPLAY_BUFFER_SAMPLE = 128
-LOG_EVERY = 1000
+REPLAY_BUFFER_SAMPLE = 256
+LOG_EVERY = 1_000
 MLP_SIZE = 256
 TAU = 0.005
 GAMMA = 0.99
 EVAL_EVERY = 10_000   # frames
 EVAL_EPISODES = 3
-DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
+DEVICE = "auto" 
 
 
 env = gym.make("LunarLanderContinuous-v3")
@@ -30,8 +30,8 @@ action_noise = NormalActionNoise(
 )
 
 model = DDPG(
-    "MlpPolicy", 
-    env, 
+    policy="MlpPolicy", 
+    env=env, 
     action_noise=action_noise, 
     verbose=1, 
     seed=0, 
@@ -42,6 +42,10 @@ model = DDPG(
     gamma=GAMMA,
     device=DEVICE,
     action_noise=action_noise,
+    train_freq=FRAMES_PER_BATCH,
+    gradient_steps=OPTIM_STEPS,
+    learning_starts=INIT_RAND_STEPS,
+    policy_kwargs=dict(net_arch=[MLP_SIZE, MLP_SIZE]),
 )
 
 model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY)
