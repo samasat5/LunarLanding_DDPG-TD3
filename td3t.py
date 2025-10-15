@@ -1,5 +1,6 @@
 import time
 import pdb
+import torchrl
 import matplotlib.pyplot as plt
 from tensordict import TensorDict
 from torchrl.envs import GymEnv, StepCounter, TransformedEnv
@@ -110,18 +111,18 @@ rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 # print("Critic 2 output:", critic_net_2(td)["state_action_value2"].shape)
 
 
+print(torchrl.__version__)
+# from torchrl.modules import TensorDictSequential as TDS, CatTensors
 
-from torchrl.modules import TensorDictSequential as TDS, CatTensors
+# critic_net_1 = TDS(
+#     CatTensors(in_keys=["observation", "action"], out_key="obs_act"),
+#     TDM(critic_mlp_1, in_keys=["obs_act"], out_keys=["state_action_value1"])
+# )
 
-critic_net_1 = TDS(
-    CatTensors(in_keys=["observation", "action"], out_key="obs_act"),
-    TDM(critic_mlp_1, in_keys=["obs_act"], out_keys=["state_action_value1"])
-)
-
-critic_net_2 = TDS(
-    CatTensors(in_keys=["observation", "action"], out_key="obs_act"),
-    TDM(critic_mlp_2, in_keys=["obs_act"], out_keys=["state_action_value2"])
-)
+# critic_net_2 = TDS(
+#     CatTensors(in_keys=["observation", "action"], out_key="obs_act"),
+#     TDM(critic_mlp_2, in_keys=["obs_act"], out_keys=["state_action_value2"])
+# )
 
 
 
