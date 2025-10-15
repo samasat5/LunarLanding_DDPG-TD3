@@ -4,7 +4,7 @@ from stable_baselines3 import DDPG
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 
 
-env = gym.make("LunarLanderContinuous-v3", render_mode="human")
+env = gym.make("LunarLanderContinuous-v3", render_mode="rgb_array")
 
 # The noise objects for DDPG
 n_actions = env.action_space.shape[-1]
@@ -26,6 +26,6 @@ for ep in range(episodes):
     while not done:
         action, _states = model.predict(obs)
         obs, rewards, done, info = vec_env.step(action)
-        env.render("human")
+        env.render()
 
 env.close()
