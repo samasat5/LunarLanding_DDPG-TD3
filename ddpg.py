@@ -83,8 +83,8 @@ exploration_module = OUNoise(
     dt=1e-2,
 )
 # mettre en place gaussian noise
-rollout_policy = Seq(policy, exploration_module) # à vérifier de ne pas dépasser les bornes de l'espace des actions?????
-rollout_policy = Seq(actor_net, tanh_on_action, exploration_module)
+# rollout_policy = Seq(policy, exploration_module) # à vérifier de ne pas dépasser les bornes de l'espace des actions?????
+rollout_policy = Seq(actor, tanh_on_action, exploration_module)
 
 # 3. Critic (action value function)
 critic_mlp = MLP(
