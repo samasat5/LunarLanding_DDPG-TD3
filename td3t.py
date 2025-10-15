@@ -11,19 +11,33 @@ from torch.optim import Adam
 from torchrl._utils import logger as torchrl_logger
 import torch
 from torch import nn, optim
+from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
+from torchrl.envs.utils import check_env_specs
+
 
 # Environment
 env = TransformedEnv(
     GymEnv("LunarLanderContinuous-v3"),
-    StepCounter(max_steps=1000))
+    Compose(
+        DoubleToFloat(),
+        InitTracker(),
+        ObservationNorm(in_keys=["observation"]),
+        StepCounter(),
+    )
+)
 env.set_seed(0)
+
+env.transform[2].init_stats(1024) 
+torch.manual_seed(0)
+env.set_seed(0)
+check_env_specs(env) 
 
 obs_dim = env.observation_spec["observation"].shape[-1] # observation_spec : the observation space
 act_dim = env.action_spec.shape[-1] #action_spec : the action space
 max_action = env.action_spec.space.high[0]
 min_action = env.action_spec.space.low[0]
 
-# pdb.set_trace()
+pdb.set_trace()
 
 # Critic
 MLP_SIZE = 256
