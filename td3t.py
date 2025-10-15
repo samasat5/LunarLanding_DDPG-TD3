@@ -118,12 +118,9 @@ LOG_EVERY = 1000
 
 for i, data in enumerate(collector):
     rb.extend(data)
-    max_length = rb[:]["next", "step_count"].max()
     if len(rb) > INIT_RAND_STEPS:
         for _ in range(OPTIM_STEPS):
-            
             batch = rb.sample(128)
-            batch = TensorDict(batch, batch_size=[128])
             loss_dict = loss(batch)
             optim.zero_grad()
             loss_dict["loss"].backward()
