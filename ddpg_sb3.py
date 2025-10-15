@@ -18,9 +18,14 @@ vec_env = model.get_env()
 del model # remove to demonstrate saving and loading
 
 model = DDPG.load("ddpg_lunarlander")
+episodes = 10
 
-obs = vec_env.reset()
-while True:
-    action, _states = model.predict(obs)
-    obs, rewards, dones, info = vec_env.step(action)
-    env.render("human")
+for ep in range(episodes):
+    obs = vec_env.reset()
+    done = False
+    while not done:
+        action, _states = model.predict(obs)
+        obs, rewards, done, info = vec_env.step(action)
+        env.render("human")
+
+env.close()
