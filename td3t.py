@@ -45,7 +45,7 @@ actor_mlp = MLP(
 actor_net = TDM(actor_mlp, in_keys=["observation"], out_keys=["action"])
 
 
-# pdb.set_trace()
+
 EPS_0 = 0.2
 exploration_module = OUNoise(
     spec=env.action_spec,
@@ -54,15 +54,6 @@ exploration_module = OUNoise(
     dt=1e-2,
 )
 policy = Seq(actor_net, exploration_module)
-
-
-
-with torch.no_grad():
-    td0 = env.reset()          # has "observation"
-    _ = policy(td0.clone())    # init actor
-    td1 = td0.clone()
-    td1["action"] = env.action_spec.rand(td1.batch_size)
-    _ = critic(td1)            # init critic
 
 
 
