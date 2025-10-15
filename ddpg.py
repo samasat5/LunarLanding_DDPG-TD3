@@ -76,14 +76,15 @@ actor = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_raw"])
 # Wrap Tanh so it applies to the "action" tensor 
 tanh_on_action = TDM(nn.Tanh(), in_keys=["action_raw"], out_keys=["action"])
 policy = Seq(actor, tanh_on_action, selected_out_keys=["action"])   # final tanh ensures [-1, 1] range
-ou_noise = OUNoise(
+exploration_module = OUNoise(
     spec=env.action_spec,
     theta=0.15,
     sigma=0.2,
     dt=1e-2,
 )
 # mettre en place gaussian noise
-rollout_policy = Seq(policy, ou_noise) # à vérifier de ne pas dépasser les bornes de l'espace des actions?????
+rollout_policy = Seq(policy, exploration_module) # à vérifier de ne pas dépasser les bornes de l'espace des actions?????
+rollout_policy = Seq(actor_net, tanh_on_action, exploration_module)
 
 # 3. Critic (action value function)
 critic_mlp = MLP(
