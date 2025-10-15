@@ -1,5 +1,6 @@
 import time
 import pdb
+import torchrl
 import matplotlib.pyplot as plt
 from tensordict import TensorDict
 from torchrl.envs import GymEnv, StepCounter, TransformedEnv
@@ -45,7 +46,7 @@ critic_mlp_1 = MLP(
     activation_class=nn.ReLU,
     activate_last_layer=False
 )
-critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
+critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value1"]) 
 # # qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
 # observation_example = torch.randn( obs_dim) 
 # action_example = torch.randn( act_dim)  
@@ -53,7 +54,7 @@ critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["s
 
 
 critic_mlp_2 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
-critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value"])      
+critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value2"])      
 # # qvalue_2 = QValueModule(critic_net_2, spec=env.action_spec)  
 # qvalue_2 = critic_net_2
 
@@ -92,11 +93,44 @@ BUFFER_LEN = 100000
 rb = ReplayBuffer(storage=LazyTensorStorage(BUFFER_LEN))
 
 
-# TD3 Loss
-loss = TD3Loss(
-    qvalue_network=(critic_net_1, critic_net_2),  
-    actor_network=actor_net,           
-)
+
+# # test
+# # Test forward with dummy batch
+# dummy_obs = torch.randn(10, obs_dim)  # Batch of 10
+# dummy_action = torch.randn(10, act_dim)
+
+# td = TensorDict({
+#     "observation": dummy_obs,
+#     "action": dummy_action
+# }, batch_size=[10])
+
+# pdb.set_trace() 
+# # Forward pass
+# print("Actor output:", actor_net(td)["action"].shape)
+# print("Critic 1 output:", critic_net_1(td)["state_action_value1"].shape)
+# print("Critic 2 output:", critic_net_2(td)["state_action_value2"].shape)
+
+
+print(torchrl.__version__)
+# from torchrl.modules import TensorDictSequential as TDS, CatTensors
+
+# critic_net_1 = TDS(
+#     CatTensors(in_keys=["observation", "action"], out_key="obs_act"),
+#     TDM(critic_mlp_1, in_keys=["obs_act"], out_keys=["state_action_value1"])
+# )
+
+# critic_net_2 = TDS(
+#     CatTensors(in_keys=["observation", "action"], out_key="obs_act"),
+#     TDM(critic_mlp_2, in_keys=["obs_act"], out_keys=["state_action_value2"])
+# )
+
+
+
+# # TD3 Loss
+# loss = TD3Loss(
+#     qvalue_network=(critic_net_1, critic_net_2),  
+#     actor_network=actor_net,           
+# )
 
 
 # # optimizer
