@@ -38,11 +38,13 @@ qvalue_1 = critic_net_1
 # qvalue_2 = critic_net_2
 
 
+
 observation_example = torch.randn(1, obs_dim) 
 action_example = torch.randn(1, act_dim)  
-print(f"Critic 1 input shape (observation, action): {observation_example.shape}, {action_example.shape}")
+
+print(f"Critic 1 input shape (observation, action): {observation_example}, {action_example}")
 critic_output_1 = critic_net_1({'observation': observation_example, 'action': action_example})
-print(f"Critic 1 output shape: {critic_output_1['state_action_value'].shape}")
+print(f"Critic 1 output shape: {critic_output_1['state_action_value']}")
 
 # print(f"Critic 2 input shape (observation, action): {observation_example.shape}, {action_example.shape}")
 # critic_output_2 = critic_net_2({'observation': observation_example, 'action': action_example})
