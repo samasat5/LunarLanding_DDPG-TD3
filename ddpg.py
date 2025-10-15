@@ -113,6 +113,7 @@ loss = DDPGLoss(
     delay_actor=True,            
     delay_value=True, 
 )
+loss.make_value_estimator(gamma=GAMMA)
 updater = SoftUpdate(loss, tau=TAU)
 
 # 5. Replay buffer
