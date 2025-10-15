@@ -17,6 +17,9 @@ from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTra
 from torchrl.envs.utils import check_env_specs
 
 
+# configurations
+MLP_SIZE = 256
+
 # Environment
 env = TransformedEnv(
     GymEnv("LunarLanderContinuous-v3"),
@@ -27,7 +30,6 @@ env = TransformedEnv(
         StepCounter(),
     )
 )
-env.set_seed(0)
 
 env.transform[2].init_stats(1024) 
 torch.manual_seed(0)
@@ -39,7 +41,6 @@ act_dim = env.action_spec.shape[-1] #action_spec : the action space
 
 
 # Critic
-MLP_SIZE = 256
 critic_mlp_1 = MLP(
     out_features=1, 
     num_cells=[MLP_SIZE, MLP_SIZE],
