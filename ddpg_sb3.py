@@ -27,9 +27,6 @@ eval_env = Monitor(gym.make("LunarLanderContinuous-v3"))
 env.reset(seed=0)
 eval_env.reset(seed=0)
 
-check_env_specs(env)
-check_env_specs(eval_env)
-
 # The noise objects for DDPG
 n_actions = env.action_space.shape[-1]
 action_noise = NormalActionNoise(
