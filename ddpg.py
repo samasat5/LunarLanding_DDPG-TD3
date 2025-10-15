@@ -184,6 +184,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
 
     if total_count % LOG_EVERY == 0:
         torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
+    
     if total_count % EVAL_EVERY < FRAMES_PER_BATCH: # A vérifier
         policy.eval()
         with torch.no_grad():
