@@ -24,8 +24,9 @@ for ep in range(episodes):
     obs = vec_env.reset()
     done = False
     while not done:
+        env.render()
         action, _states = model.predict(obs)
         obs, rewards, done, info = vec_env.step(action)
-        env.render()
+        
 
 env.close()
