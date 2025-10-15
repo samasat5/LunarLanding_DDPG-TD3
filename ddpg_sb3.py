@@ -61,7 +61,7 @@ model = DDPG(
     policy_kwargs=dict(net_arch=[MLP_SIZE, MLP_SIZE]),
 )
 model.set_logger(logger)
-model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY)
+model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY) # train the agent
 model.save("ddpg_lunarlander")
 vec_env = model.get_env() # returns the correct environment
 
