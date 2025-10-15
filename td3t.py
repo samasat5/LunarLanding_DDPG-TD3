@@ -2,7 +2,7 @@ import time
 import pdb
 import matplotlib.pyplot as plt
 from torchrl.envs import GymEnv, StepCounter, TransformedEnv
-from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
+from tensordict.nn import TensorDictModule , TensorDictSequential as Seq
 from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP, EGreedyModule
 from torchrl.objectives import DQNLoss, SoftUpdate, DDPGLoss,TD3Loss
 from torchrl.collectors import SyncDataCollector
@@ -41,7 +41,7 @@ min_action = env.action_spec.space.low[0].item()
 # Critic
 MLP_SIZE = 256
 critic_mlp_1 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE])
-critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
+critic_net_1 = TensorDictModule(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value"]) 
 # qvalue_1 = QValueModule(critic_net_1, spec=env.action_spec)  
 observation_example = torch.randn( obs_dim) 
 action_example = torch.randn( act_dim)  
