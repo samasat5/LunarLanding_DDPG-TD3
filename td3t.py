@@ -103,10 +103,11 @@ td = TensorDict({
     "action": dummy_action
 }, batch_size=[10])
 
+pdb.set_trace() 
 # Forward pass
 print("Actor output:", actor_net(td)["action"].shape)
-print("Critic 1 output:", critic_net_1(td)["state_action_value"].shape)
-print("Critic 2 output:", critic_net_2(td)["state_action_value"].shape)
+print("Critic 1 output:", critic_net_1(td)["state_action_value1"].shape)
+print("Critic 2 output:", critic_net_2(td)["state_action_value2"].shape)
 
 
 
