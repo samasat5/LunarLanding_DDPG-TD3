@@ -186,7 +186,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         loss_q = loss(td)["loss_value"]
         loss_q.backward()
         optim_critic.step()
-        updater.step()
+        # updater.step()
 
         # Actor update (freeze critic params or detach inside loss)
         for p in critic.parameters(): p.requires_grad = False
@@ -194,8 +194,14 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         loss_pi = loss(td)["loss_actor"]
         loss_pi.backward()
         optim_actor.step()
-        updater.step()
+        # updater.step()
         for p in critic.parameters(): p.requires_grad = True
+        
+                # --- Soft update targets
+        with torch.no_grad():
+            soft_update(actor_net, actor_target, TAU)
+            soft_update(critic_net_1, critic_1_target, TAU)
+            soft_update(critic_net_2, critic_2_target, TAU)
 
 
         # Record TD bias
