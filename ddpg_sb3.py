@@ -15,9 +15,9 @@ from stable_baselines3.common.vec_env import VecNormalize
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
-TOTAL_FRAMES = 1_000_000 # 100_000
-FRAMES_PER_BATCH = 1 #100 train freq
-OPTIM_STEPS =  1#10 gradient steps
+TOTAL_FRAMES = 100_000 # 1_000_000
+FRAMES_PER_BATCH = 100 # train freq
+OPTIM_STEPS =  10 # gradient steps
 BUFFER_LEN = 1_000_000
 REPLAY_BUFFER_SAMPLE = 256 # 128
 LOG_EVERY = 1_000
@@ -32,7 +32,10 @@ DEVICE = "auto"
 env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=0)
 env = VecNormalize(env, norm_obs=True, norm_reward=True)
 eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
-eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=True)
+eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False) # do not normalize rewards for eval env
+
+eval_env.obs_rms = env.obs_rms
+# That copies the mean and variance of observations learned by the training env, so your evaluation uses the same normalization scale.
 
 # The noise objects for DDPG
 n_actions = env.action_space.shape[-1]
@@ -66,7 +69,7 @@ class TqdmProgressCallback(BaseCallback):
         self.pbar = None
 
     def _on_training_start(self):
-        self.pbar = tqdm(total=self.total_timesteps, desc="Training progress", ncols=100)
+        self.pbar = tqdm(total=self.total_timesteps, desc="Training progress", ncols=100, dynamic_ncols=True)
 
     def _on_step(self) -> bool:
         self.pbar.update(1)  # one step per env step
