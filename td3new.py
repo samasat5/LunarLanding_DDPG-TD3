@@ -148,7 +148,8 @@ critic_target = deepcopy(critic_net)
 #     delay_qvalue=True,
 # )
 loss = TD3Loss(
-    actor_network=Seq(actor_net, tanh_on_action), 
+    # actor_network=Seq(actor_net, tanh_on_action), 
+    actor_network=policy, 
     qvalue_network=critic_net,
     action_spec=env.action_spec,
     loss_function="l2",
