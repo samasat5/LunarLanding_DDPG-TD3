@@ -193,7 +193,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         target_q = loss_out["target_value"]
         bias_batch = (pred_q - target_q).detach().mean().item()
         
-        biases.append(bias_batch)
+        # biases.append(bias_batch)
 
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
