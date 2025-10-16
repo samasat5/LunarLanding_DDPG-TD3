@@ -312,13 +312,9 @@ def train(
     window = 200  # adjust for smoothing strength
     smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
     plt.figure(figsize=(12,5))
-    plt.plot(biases, label="TD raw Bias")
-    plt.title(f"Training {method} - Bias")
-    plt.xlabel("Training Steps")
-    plt.show()
-    
-    plt.figure(figsize=(12,5))
-    plt.plot(smooth_bias, label="TD smoothed Bias")
+    plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
+    plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
+    plt.title(f"Training {method} - TD Bias")
     plt.title(f"Training {method} - Bias")
     plt.xlabel("Training Steps")
     plt.show()
