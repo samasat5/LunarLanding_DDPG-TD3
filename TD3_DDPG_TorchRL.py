@@ -43,7 +43,7 @@ MLP_SIZE = 256
 TAU = 0.01
 GAMMA = 0.99
 EVAL_EVERY = 10_000   # frames
-EVAL_EPISODES = 3
+EVAL_EPISODES = 10
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 
 # Seed the Python and RL environments to replicate similar results across training sessions. 
