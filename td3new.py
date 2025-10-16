@@ -247,7 +247,7 @@ for i, data in enumerate(collector):  # Data from env rollouts
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
         qvalues.append((pred_q1 + pred_q1) / 2) 
-        # pdb.set_trace()
+        pdb.set_trace()
 
     success_steps.append(max_length)
 
