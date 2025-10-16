@@ -130,7 +130,7 @@ with torch.no_grad():
 
 
 # Targets
-actor_target = deepcopy(policy) # no noise in target
+actor_target = deepcopy(actor_net) # no noise in target
 critic_1_target = deepcopy(critic_net_1)
 critic_2_target = deepcopy(critic_net_2)
 
