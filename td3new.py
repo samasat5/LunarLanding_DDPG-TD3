@@ -280,7 +280,12 @@ for i, data in enumerate(collector):  # Data from env rollouts
         policy.train()
 
     # --- Update tqdm bar
-    pbar.set_description(f"Frames: {total_count} | Episodes: {total_episodes} | Mean Q: {np.mean(qvalues[-50:]):.3f}")
+    pbar.set_postfix({
+        "Steps": total_count,
+        "Episodes": total_episodes,
+        "Mean Q": f"{torch.tensor(qvalues[-50:]).mean().item():.2f}",
+        "Bias": f"{torch.tensor(biases[-50:]).mean().item():.2f}",
+    })
     pbar.update(1)
 
 # --- End training
