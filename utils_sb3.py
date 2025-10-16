@@ -22,21 +22,25 @@ class QBiasLoggerDDPG(BaseCallback):
         rb = getattr(self.model, "replay_buffer", None)
         if rb is None or rb.size() == 0:
             return True
+        
         n = min(self.sample_n, rb.size())
         batch = rb.sample(n)
 
         policy = self.model.policy
         device = policy.device
+        # If it’s not already a tensor, convert it to a tensor and put it on the same device as the model.
         to = lambda x: x if isinstance(x, torch.Tensor) else torch.as_tensor(x, device=device)
 
+        #print(batch)
         obs = to(batch.observations)
         act = to(batch.actions)
         nxt = to(batch.next_observations)
         rew = to(batch.rewards).squeeze(-1) #removes the last dimension if it’s size 1 (usually Nx1)
         done = to(batch.dones).squeeze(-1)
+
         timeouts = None
         if hasattr(batch, "timeouts") and batch.timeouts is not None: #Some environments end because the agent fails or succeeds (done=True),
-            timeouts = to(batch.timeouts).squeeze(-1)                                                          #others just reach a time limit (max episode steps), which should not count as a terminal state for bootstrapping.
+            timeouts = to(batch.timeouts).squeeze(-1)                 #others just reach a time limit (max episode steps), which should not count as a terminal state for bootstrapping.
 
         with torch.no_grad():
             #print(policy.critic(obs, act)[0].shape)
@@ -44,25 +48,23 @@ class QBiasLoggerDDPG(BaseCallback):
 
             next_a = policy.actor_target(nxt)
             #print(policy.critic_target(nxt, next_a)[0].shape)
-            q_next = policy.critic_target(nxt, next_a)[0].squeeze(-1)
+            next_q = policy.critic_target(nxt, next_a)[0].squeeze(-1)
 
             nonterminal = 1.0 - done # if timeout is None, done is enough
             if timeouts is not None:
                 nonterminal = (1.0 - done) * (1.0 - timeouts)
 
-            target = rew + self.gamma * nonterminal * q_next
+            target = rew + self.gamma * nonterminal * next_q
             bias = (q - target).cpu().numpy()
 
         mean_bias = float(np.mean(bias))
         mean_abs  = float(np.mean(np.abs(bias)))
         std_bias  = float(np.std(bias))
 
-        # show in TensorBoard/CSV (SB3 logger)
         self.logger.record("q_bias/mean", mean_bias)
         self.logger.record("q_bias/mean_abs", mean_abs)
         self.logger.record("q_bias/std", std_bias)
 
-        # also append to our CSV for later plotting
         with open(self.save_csv, "a", newline="") as f:
             csv.writer(f).writerow([self.num_timesteps, mean_bias, mean_abs, std_bias])
 
@@ -80,8 +82,8 @@ class QBiasLoggerTD3(BaseCallback):
     """
     def __init__(self, gamma: float, sample_n: int = 50_000, save_csv: str = "./logs_td3/qbias/qbias_log.csv"):
         super().__init__()
-        self.gamma = float(gamma)
-        self.sample_n = int(sample_n)
+        self.gamma = gamma
+        self.sample_n = sample_n
         self.save_csv = save_csv
         os.makedirs(os.path.dirname(save_csv), exist_ok=True)
         if not os.path.exists(save_csv):
@@ -99,12 +101,11 @@ class QBiasLoggerTD3(BaseCallback):
         TD3 target policy smoothing: add clipped Gaussian noise and clip to action bounds.
         Uses the algorithm's noise hyperparams & env action space.
         """
-        # Actor target output
         next_a = self.model.policy.actor_target(nxt)
 
         # TD3 target smoothing noise
         noise_scale = float(getattr(self.model, "target_policy_noise", 0.2))
-        noise_clip  = float(getattr(self.model, "target_noise_clip", 0.5))
+        noise_clip = float(getattr(self.model, "target_noise_clip", 0.5))
         noise = torch.normal(mean=0.0, std=noise_scale, size=next_a.shape, device=next_a.device)
         noise = noise.clamp(-noise_clip, noise_clip)
         next_a = next_a + noise
@@ -132,44 +133,39 @@ class QBiasLoggerTD3(BaseCallback):
         nxt = to(batch.next_observations)
         rew = to(batch.rewards).squeeze(-1)
         done = to(batch.dones).squeeze(-1)
+
         timeouts = None
         if hasattr(batch, "timeouts") and batch.timeouts is not None:
             timeouts = to(batch.timeouts).squeeze(-1)
 
         with torch.no_grad():
-            # --- current Qs (twin critics)
             q1, q2 = policy.critic(obs, act)
             q1 = q1.squeeze(-1)
             q2 = q2.squeeze(-1)
 
-            # --- target Q with TD3 smoothing & min over target critics
             next_a = self._td3_target_actions(nxt)
             qt1, qt2 = policy.critic_target(nxt, next_a)
             qt1 = qt1.squeeze(-1)
             qt2 = qt2.squeeze(-1)
-            q_next_min = torch.minimum(qt1, qt2)
+            next_q_min = torch.minimum(qt1, qt2)
 
             nonterminal = 1.0 - done
             if timeouts is not None:
                 nonterminal = (1.0 - done) * (1.0 - timeouts)
 
-            target = rew + self.gamma * nonterminal * q_next_min
+            target = rew + self.gamma * nonterminal * next_q_min
             bias1 = (q1 - target).cpu().numpy()
             bias2 = (q2 - target).cpu().numpy()
-            # Also useful: the min(current critics) bias (diagnostic)
+
             q_min_curr = torch.minimum(q1, q2)
             bias_min = (q_min_curr - target).cpu().numpy()
 
-            # overestimation gap between critics (absolute)
+            # overestimation gap between critics 
             over_gap = torch.abs(q1 - q2).cpu().numpy()
 
-        # stats
-        def stats(x):
-            return float(np.mean(x)), float(np.mean(np.abs(x))), float(np.std(x))
-
-        q1_mean, q1_abs, q1_std = stats(bias1)
-        q2_mean, q2_abs, q2_std = stats(bias2)
-        mn_mean, mn_abs, mn_std = stats(bias_min)
+        q1_mean, q1_abs, q1_std = float(np.mean(bias1)), float(np.mean(np.abs(bias1))), float(np.std(bias1))
+        q2_mean, q2_abs, q2_std = float(np.mean(bias2)), float(np.mean(np.abs(bias2))), float(np.std(bias2))
+        mn_mean, mn_abs, mn_std = float(np.mean(bias_min)), float(np.mean(np.abs(bias_min))), float(np.std(bias_min))
         gap_abs_mean = float(np.mean(over_gap))
 
         # log to SB3 (TensorBoard/CSV if configured)
@@ -202,7 +198,7 @@ class QBiasLoggerTD3(BaseCallback):
 
 def plot_qbias_ddpg(csv_path="./logs_ddpg/qbias/qbias_log.csv", save_path=None):
     """
-    Read the q-bias CSV saved by QBiasLogger and plot the mean, |mean| and std.
+    Read the q-bias CSV saved by QBiasLoggerDDPG and plot the mean, |mean| and std.
 
     :param csv_path: Path to the CSV created by QBiasLogger.
     :param save_path: Optional path to save the figure. If None, saves next to CSV.
@@ -213,6 +209,7 @@ def plot_qbias_ddpg(csv_path="./logs_ddpg/qbias/qbias_log.csv", save_path=None):
 
     # Read CSV with column names
     data = np.genfromtxt(csv_path, delimiter=",", names=True)
+ 
     timesteps = data["timesteps"]
     mean_bias = data["mean_bias"]
     mean_abs = data["mean_abs_bias"]
@@ -234,7 +231,7 @@ def plot_qbias_ddpg(csv_path="./logs_ddpg/qbias/qbias_log.csv", save_path=None):
     plt.tight_layout()
     plt.savefig(save_path, dpi=200)
     plt.close()
-    print(f"✅ Q-bias plot saved at: {save_path}")
+    print(f"Q-bias plot saved at: {save_path}")
     return save_path
 
 def plot_qbias_td3(csv_path="./logs_td3/qbias/qbias_log.csv", save_path=None):
@@ -249,24 +246,20 @@ def plot_qbias_td3(csv_path="./logs_td3/qbias/qbias_log.csv", save_path=None):
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"No file found at {csv_path}")
 
-    # Load CSV
     data = np.genfromtxt(csv_path, delimiter=",", names=True)
     t = data["timesteps"]
-
-    # Helper
-    def c(name): return data[name]
 
     plt.figure(figsize=(9, 5))
 
     # Plot both critics’ mean biases
-    plt.plot(t, c("q1_mean"), label="Q1 mean bias")
-    plt.plot(t, c("q2_mean"), label="Q2 mean bias")
-    plt.plot(t, c("min_mean"), label="min(Q1, Q2) mean bias")
+    plt.plot(t, data["q1_mean"], label="Q1 mean bias")
+    plt.plot(t, data["q2_mean"], label="Q2 mean bias")
+    plt.plot(t, data["min_mean"], label="min(Q1, Q2) mean bias")
 
     # Plot abs bias as dashed lines
-    plt.plot(t, c("q1_mean_abs"), "--", label="Q1 mean |bias|")
-    plt.plot(t, c("q2_mean_abs"), "--", label="Q2 mean |bias|")
-    plt.plot(t, c("min_mean_abs"), "--", label="min(Q1,Q2) mean |bias|")
+    plt.plot(t, data["q1_mean_abs"], "--", label="Q1 mean |bias|")
+    plt.plot(t, data["q2_mean_abs"], "--", label="Q2 mean |bias|")
+    plt.plot(t, data["min_mean_abs"], "--", label="min(Q1,Q2) mean |bias|")
 
     # Plot the overestimation gap
     if "overestimation_gap_mean_abs" in data.dtype.names:
@@ -285,5 +278,10 @@ def plot_qbias_td3(csv_path="./logs_td3/qbias/qbias_log.csv", save_path=None):
     plt.tight_layout()
     plt.savefig(save_path, dpi=200)
     plt.close()
-    print(f"✅ TD3 Q-bias plot saved at: {save_path}")
+    print(f"TD3 Q-bias plot saved at: {save_path}")
     return save_path
+
+
+if __name__ == "__main__":
+    #plot_qbias_td3()
+    plot_qbias_ddpg()
