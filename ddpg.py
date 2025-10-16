@@ -123,7 +123,6 @@ loss = DDPGLoss(
     gamma=GAMMA,
     delay_actor=True,
     delay_value=True,
-    policy_noise=0.2,   
     noise_clip=0.5,
 )
 loss.make_value_estimator(gamma=GAMMA)
