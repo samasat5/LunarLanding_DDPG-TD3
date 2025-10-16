@@ -9,7 +9,7 @@ from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
 from torchrl.collectors import SyncDataCollector
 from torchrl.data import ReplayBuffer, SamplerWithoutReplacement, LazyTensorStorage, RandomSampler
-from torchrl.objectives import DDPGLoss, SoftUpdate
+from torchrl.objectives import DDPGLoss, SoftUpdate,TD3Loss
 from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP
 from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
 from torchrl._utils import logger as torchrl_logger
@@ -129,13 +129,22 @@ with torch.no_grad():
     _ = actor_target(td0.clone())     # init target actor
     _ = critic_target(td1.clone())    # init target critic
 
-loss = DDPGLoss(
+loss_ddpg = DDPGLoss(
     actor_network=policy, # deterministic 
     value_network=critic,
     loss_function="l2",
     # delay_actor=True, # for more stability Default is False
     # delay_value=True, # for more stability Default is True
 )
+loss_td3 = TD3Loss(
+    actor_network=policy, # deterministic 
+    qvalue_network=critic,
+    loss_function="l2",
+    action_spec=env.action_spec,
+    # delay_actor=True, # for more stability Default is False
+    # delay_value=True, # for more stability Default is True
+)
+
 loss.make_value_estimator(gamma=GAMMA)
 updater = SoftUpdate(loss, tau=TAU)
 

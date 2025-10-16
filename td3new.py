@@ -124,7 +124,6 @@ loss = TD3Loss(
     delay_qvalue=True,
 )
 
-
 updater = SoftUpdate(loss, tau=TAU)
         
 loss.make_value_estimator(gamma=GAMMA)
