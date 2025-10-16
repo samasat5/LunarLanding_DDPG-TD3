@@ -307,3 +307,11 @@ plt.plot(smooth_bias, label="TD smoothed Bias")
 plt.title("Training TD3")
 plt.xlabel("Training Steps")
 plt.show()
+
+
+
+plt.figure(figsize=(12,5))
+plt.plot(qvalues, label="Q Value Loss")
+plt.title("Training DDPG - Q Values")
+plt.xlabel("Training Steps")
+plt.show()
