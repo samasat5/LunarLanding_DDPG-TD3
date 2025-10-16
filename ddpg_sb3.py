@@ -54,7 +54,6 @@ eval_callback = EvalCallback(
 model = DDPG(
     policy="MlpPolicy", 
     env=env, 
-    action_noise=action_noise, 
     verbose=1, 
     seed=0, 
     learning_rate=1e-3,
