@@ -87,7 +87,7 @@ tanh_on_action = TDM(nn.Tanh(), in_keys=["action_raw"], out_keys=["action"])
 exploration_module = OUNoise(
     spec=env.action_spec,
     theta=0.15,
-    sigma=0.1,
+    sigma=0.05,
     dt=1e-2,
 )
 # mettre en place gaussian noise
@@ -247,6 +247,8 @@ window = 200  # adjust for smoothing strength
 smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
 
 plt.figure(figsize=(12,5))
+plt.plot(smooth_bias, label="TD smoothed Bias")
+# plt.plot(qvalues, label="Q Value Loss")
 plt.legend()
 plt.title("Training Diagnostics")
 plt.xlabel("Training Steps")
