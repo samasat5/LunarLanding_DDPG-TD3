@@ -246,8 +246,8 @@ for i, data in enumerate(collector):  # Data from env rollouts
         # --- Stats
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
-        qvalues.append((loss_q1.item() + loss_q2.item()) / 2) #TODO
-        pdb.set_trace()
+        qvalues.append((pred_q1 + pred_q1) / 2) 
+        # pdb.set_trace()
 
     success_steps.append(max_length)
 
@@ -299,9 +299,9 @@ torchrl_logger.info(f"Solved after {total_count} steps, {total_episodes} episode
 
 # --- Plot results
 plt.figure(figsize=(10, 5))
-plt.title("Average Q-values over training")
-plt.xlabel("Steps")
-plt.ylabel("Q-value")
-plt.plot(qvalues)
-plt.grid(True)
+window = 200  # adjust for smoothing strength
+smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
+plt.legend()
+plt.title("Training TD3")
+plt.xlabel("Training Steps")
 plt.show()
