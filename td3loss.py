@@ -173,14 +173,13 @@ optim_actor = optim.Adam(policy.parameters(), lr=6e-4)
 optim_critic = optim.Adam(critic.parameters(), lr=6e-4)
 
 
-def train (
+def train(
     method,
     loss,
     optim_critic,
     optim_actor,
     replay_buffer,
     collector,
-    updater,
     total_frames=TOTAL_FRAMES,
     eval_env=None,
     eval_episodes=EVAL_EPISODES,
@@ -305,3 +304,20 @@ def train (
     plt.title(f"Training {method} - Q Values")
     plt.xlabel("Training Steps")
     plt.show()
+
+
+train(
+    method="TD3",
+    loss=loss_td3,
+    optim_critic=optim_critic,
+    optim_actor=optim_actor,
+    replay_buffer=replay_buffer,
+    collector=collector,
+    total_frames=TOTAL_FRAMES,
+    eval_env=eval_env,
+    eval_episodes=EVAL_EPISODES,
+    log_every=LOG_EVERY,
+    eval_every=EVAL_EVERY,
+    opt_steps=OPTIM_STEPS,
+    batch_size=REPLAY_BUFFER_SAMPLE,
+)
