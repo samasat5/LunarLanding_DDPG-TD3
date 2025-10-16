@@ -120,7 +120,6 @@ loss = DDPGLoss(
     actor_network=policy, # deterministic 
     value_network=critic,
     loss_function="l2",
-    gamma=GAMMA,
     delay_actor=True,
     delay_value=True,
 )
