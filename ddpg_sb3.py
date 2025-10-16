@@ -9,9 +9,10 @@ from stable_baselines3 import DDPG
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.callbacks import EvalCallback, EveryNTimesteps
 from stable_baselines3.common.env_util import make_vec_env  
 from stable_baselines3.common.vec_env import VecNormalize
+from utils_sb3 import QBiasLoggerDDPG, plot_qbias_ddpg
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
@@ -29,9 +30,9 @@ EVAL_EPISODES = 3
 DEVICE = "auto" 
 
 
-env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=0)
+env = make_vec_env("LunarLanderContinuous-v3", n_envs=8, seed=0)
 env = VecNormalize(env, norm_obs=True, norm_reward=True)
-eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
+eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=8, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
 eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False) # do not normalize rewards for eval env
 
 eval_env.obs_rms = env.obs_rms
@@ -60,25 +61,9 @@ eval_callback = EvalCallback( # The callback runs episodes on eval_env every EVA
     deterministic=True,
     render=True,
 )
-
-
-class TqdmProgressCallback(BaseCallback):
-    def __init__(self, total_timesteps):
-        super().__init__()
-        self.total_timesteps = total_timesteps
-        self.pbar = None
-
-    def _on_training_start(self):
-        self.pbar = tqdm(total=self.total_timesteps, desc="Training progress", ncols=100, dynamic_ncols=True)
-
-    def _on_step(self) -> bool:
-        self.pbar.update(1)  # one step per env step
-        return True
-
-    def _on_training_end(self):
-        self.pbar.close()
-progress_bar = TqdmProgressCallback(TOTAL_FRAMES)
-
+qbias_cb = QBiasLoggerDDPG(gamma=GAMMA, sample_n=50_000, save_csv="./logs_ddpg/qbias/qbias_log.csv")
+# trigger every EVAL_EVERY timesteps (works with n_envs>1 too, because it uses num_timesteps)
+every_qbias = EveryNTimesteps(n_steps=EVAL_EVERY, callback=qbias_cb)
 
 model = DDPG(
     policy="MlpPolicy", 
@@ -98,14 +83,16 @@ model = DDPG(
     policy_kwargs=dict(net_arch=dict(pi=[400, 300], qf=[400, 300])), # Note that for DDPG/TD3, the default architecture is [400, 300]
 )
 model.set_logger(logger)
-model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY, callback=[eval_callback, progress_bar]) # train the agent, collects rollouts and optimizes the actor and critic networks
+model.learn(
+    total_timesteps=TOTAL_FRAMES, 
+    log_interval=LOG_EVERY, 
+    callback=[eval_callback, every_qbias],
+    progress_bar=True,
+) # train the agent, collects rollouts and optimizes the actor and critic networks
 model.save("ddpg_lunarlander")
-
-#vec_env = model.get_env() # returns the correct environment
-
 model = DDPG.load("ddpg_lunarlander")
 
-episodes = 10  
+# episodes = 10  
 # for ep in range(episodes):  
 #     obs = eval_env.reset()  
 #     done = False  
@@ -120,44 +107,7 @@ env.close()
 
 if __name__ == "__main__":
     eval_path = "./ddpg_eval/evaluations.npz"
+    plot_qbias_ddpg()
+    
 
-    if os.path.exists(eval_path):
-        data = np.load(eval_path, allow_pickle=True)
-        timesteps  = data["timesteps"]
-        results    = data["results"]
-        ep_lengths = data["ep_lengths"]
-
-        # Compute mean and std over episodes at each evaluation
-        mean_returns = results.mean(axis=1)
-        std_returns  = results.std(axis=1)
-        mean_lengths = ep_lengths.mean(axis=1)
-
-        plt.figure(figsize=(8, 5))
-        plt.plot(timesteps, mean_returns, label="Mean Eval Reward")
-        plt.fill_between(
-            timesteps,
-            mean_returns - std_returns,
-            mean_returns + std_returns,
-            alpha=0.2,
-            label="±1 std"
-        )
-        plt.xlabel("Timesteps")
-        plt.ylabel("Evaluation Reward")
-        plt.title("DDPG Performance on LunarLanderContinuous-v3")
-        plt.legend()
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
-
-        plt.figure(figsize=(8, 5))
-        plt.plot(timesteps, mean_lengths, color="orange", label="Mean Episode Length")
-        plt.xlabel("Timesteps")
-        plt.ylabel("Episode Length")
-        plt.title("Mean Evaluation Episode Length")
-        plt.legend()
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
-
-    else:
-        print("No evaluation file found at:", eval_path)
+    
