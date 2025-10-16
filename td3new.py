@@ -247,7 +247,7 @@ for i, data in enumerate(collector):  # Data from env rollouts
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
         qvalues.append((pred_q1 + pred_q1) / 2) 
-        pdb.set_trace()
+        # pdb.set_trace()
 
     success_steps.append(max_length)
 
@@ -285,7 +285,7 @@ for i, data in enumerate(collector):  # Data from env rollouts
     pbar.set_postfix({
         "Steps": total_count,
         "Episodes": total_episodes,
-        "Mean Q": f"{torch.tensor(qvalues[-50:]).mean().item():.2f}",
+        "Mean Q": f"{qvalues[-50:].mean():.2f}",
         "Bias": f"{torch.tensor(biases[-50:]).mean().item():.2f}",
     })
     pbar.update(1)
