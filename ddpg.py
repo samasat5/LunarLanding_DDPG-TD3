@@ -184,6 +184,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         total_episodes += data["next", "done"].sum()
         
         # qvalues.append(loss(td)["loss_value"].item()) 
+        pdb.set_trace()
         qvalues.append(loss(td)["pred_value"].item()) 
 
     success_steps.append(max_length)
