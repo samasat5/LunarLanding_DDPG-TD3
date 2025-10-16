@@ -285,7 +285,7 @@ for i, data in enumerate(collector):  # Data from env rollouts
     pbar.set_postfix({
         "Steps": total_count,
         "Episodes": total_episodes,
-        "Mean Q": f"{qvalues[-50:].mean():.2f}",
+        "Mean Q": f"{np.mean(qvalues[-50:]):.2f}",
         "Bias": f"{torch.tensor(biases[-50:]).mean().item():.2f}",
     })
     pbar.update(1)
