@@ -23,6 +23,13 @@ TD3 (twin critics + clipped double-Q + target smoothing + delayed actor updates)
 on LunarLanderContinuous-v3 environment.
 """
 
+@torch.no_grad()
+def soft_update(source, target, tau):
+    src_dict = source.state_dict()
+    tgt_dict = target.state_dict()
+    for key in src_dict:
+        tgt_dict[key] = tau * src_dict[key] + (1 - tau) * tgt_dict[key]
+    target.load_state_dict(tgt_dict)
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
@@ -126,6 +133,8 @@ loss = DDPGLoss(
 )
 loss.make_value_estimator(gamma=GAMMA)
 updater = SoftUpdate(loss, tau=TAU)
+
+
 
 # 5. Replay buffer
 replay_buffer = ReplayBuffer(
