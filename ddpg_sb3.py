@@ -65,24 +65,25 @@ model = DDPG(
     train_freq=FRAMES_PER_BATCH,
     gradient_steps=OPTIM_STEPS,
     learning_starts=INIT_RAND_STEPS,
-    policy_kwargs=dict(net_arch=[MLP_SIZE, MLP_SIZE]),
+    policy_kwargs=dict(net_arch=[MLP_SIZE, MLP_SIZE]), # Note that for DDPG/TD3, the default architecture is [400, 300]
 )
 model.set_logger(logger)
 model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY, callback=eval_callback) # train the agent
 model.save("ddpg_lunarlander")
+
 vec_env = model.get_env() # returns the correct environment
 
-
 model = DDPG.load("ddpg_lunarlander")
-episodes = 10
 
-for ep in range(episodes):
-    obs = vec_env.reset()
-    done = False
-    while not done:
-        action, _states = model.predict(obs)
-        obs, rewards, done, info = vec_env.step(action)
-        env.render()
-        
-
+episodes = 10  
+for ep in range(episodes):  
+    obs = vec_env.reset()  
+    done = False  
+    while not done:  
+        action, _states = model.predict(obs, deterministic=True)  
+        obs, rewards, dones, info = vec_env.step(action)  
+        vec_env.render()  
+        done = dones[0]  # Extract boolean from array  
+  
+vec_env.close()
 env.close()
