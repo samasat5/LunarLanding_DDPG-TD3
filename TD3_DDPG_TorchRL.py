@@ -33,7 +33,7 @@ on LunarLanderContinuous-v3 environment.
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 100_000
+TOTAL_FRAMES = 200_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -322,7 +322,7 @@ def train(
     smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     plt.figure(figsize=(12,5))
     plt.plot(smooth_qvalue, label="Q Value Loss")
-    plt.plot(qvalues, label="Raw Bias", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
+    plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(biases)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
     plt.title(f"Training {method} - smoothed Q Values")
     plt.xlabel("Training Steps")
