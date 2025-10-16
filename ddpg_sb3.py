@@ -5,12 +5,13 @@ from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckA
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.env_util import make_vec_env  
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
-TOTAL_FRAMES = 100_000
-FRAMES_PER_BATCH = 100
-OPTIM_STEPS = 10
+TOTAL_FRAMES = 1_000_000
+FRAMES_PER_BATCH = 1 #100 train freq
+OPTIM_STEPS =  1#10 gradient steps
 BUFFER_LEN = 1_000_000
 REPLAY_BUFFER_SAMPLE = 256
 LOG_EVERY = 1_000
@@ -22,10 +23,8 @@ EVAL_EPISODES = 3
 DEVICE = "auto" 
 
 
-env = Monitor(gym.make("LunarLanderContinuous-v3"))
-eval_env = Monitor(gym.make("LunarLanderContinuous-v3"))
-env.reset(seed=0)
-eval_env.reset(seed=0)
+env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=0)
+eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
 
 # The noise objects for DDPG
 n_actions = env.action_space.shape[-1]
@@ -54,7 +53,6 @@ eval_callback = EvalCallback(
 model = DDPG(
     policy="MlpPolicy", 
     env=env, 
-    action_noise=action_noise, 
     verbose=1, 
     seed=0, 
     learning_rate=1e-3,
@@ -67,24 +65,25 @@ model = DDPG(
     train_freq=FRAMES_PER_BATCH,
     gradient_steps=OPTIM_STEPS,
     learning_starts=INIT_RAND_STEPS,
-    policy_kwargs=dict(net_arch=[MLP_SIZE, MLP_SIZE]),
+    policy_kwargs=dict(net_arch=[400, 300]), # Note that for DDPG/TD3, the default architecture is [400, 300]
 )
 model.set_logger(logger)
 model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY, callback=eval_callback) # train the agent
 model.save("ddpg_lunarlander")
-vec_env = model.get_env() # returns the correct environment
 
+#vec_env = model.get_env() # returns the correct environment
 
 model = DDPG.load("ddpg_lunarlander")
-episodes = 10
 
-for ep in range(episodes):
-    obs = vec_env.reset()
-    done = False
-    while not done:
-        action, _states = model.predict(obs)
-        obs, rewards, done, info = vec_env.step(action)
-        env.render()
-        
-
+episodes = 10  
+for ep in range(episodes):  
+    obs = eval_env.reset()  
+    done = False  
+    while not done:  
+        action, _states = model.predict(obs, deterministic=True)  
+        obs, rewards, dones, info = eval_env.step(action)  
+        eval_env.render()  
+        done = dones[0]  # Extract boolean from array  
+  
+eval_env.close()
 env.close()
