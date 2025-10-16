@@ -3,6 +3,7 @@ import time
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import torch
+import numpy as np
 from tqdm import tqdm
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
@@ -242,9 +243,11 @@ print(f"Training took {t1-t0:.2f}s")
 torchrl_logger.info(
     f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
 )
+window = 200  # adjust for smoothing strength
+smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
 
 plt.figure(figsize=(12,5))
-plt.plot(biases, label="TD Bias")
+plt.plot(smooth_bias, label="TD smoothed Bias")
 plt.plot(qvalues, label="Q Value Loss")
 plt.legend()
 plt.title("Training Diagnostics")
