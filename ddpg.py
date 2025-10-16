@@ -35,7 +35,7 @@ def soft_update(source, target, tau):
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 20_000
+TOTAL_FRAMES = 100_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -266,15 +266,19 @@ torchrl_logger.info(
 )
 window = 200  # adjust for smoothing strength
 smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
-
 plt.figure(figsize=(12,5))
-plt.plot(smooth_bias, label="TD smoothed Bias")
-plt.title("Training DDPG - Bias")
+plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
+plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
+plt.title(f"Training DDPG - TD Bias")
+plt.title(f"Training DDPG - Bias")
 plt.xlabel("Training Steps")
 plt.show()
 
+smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
 plt.figure(figsize=(12,5))
-plt.plot(qvalues, label="Q Value Loss")
-plt.title("Training DDPG - Q Values")
+plt.plot(smooth_qvalue, label="Q Value Loss")
+plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
+plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
+plt.title(f"Training DDPG - smoothed Q Values")
 plt.xlabel("Training Steps")
 plt.show()
