@@ -20,16 +20,6 @@ from torchrl.envs.utils import check_env_specs
 from utils2 import MultiCriticSoftUpdate, soft_update, QValueEnsembleModule
 from tqdm import tqdm
 
-
-
-@torch.no_grad()
-def soft_update(source, target, tau):
-    src_dict = source.state_dict()
-    tgt_dict = target.state_dict()
-    for key in src_dict:
-        tgt_dict[key] = tau * src_dict[key] + (1 - tau) * tgt_dict[key]
-    target.load_state_dict(tgt_dict)
-    pdb.set_trace()
     
     
 # configurations
@@ -84,10 +74,6 @@ act_dim = env.action_spec.shape[-1] #action_spec : the action space
 
 
 # Critic
-# critic_mlp_1 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE],activation_class=nn.ReLU,activate_last_layer=False)
-# critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value1"]) 
-# critic_mlp_2 = deepcopy(critic_mlp_1)
-# critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value2"])      
 critic_mlp = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE],activation_class=nn.ReLU,activate_last_layer=False)
 critic_net = TDM(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value1"]) 
 
@@ -121,34 +107,15 @@ with torch.no_grad():
     td1 = td0.clone()
     td1["action"] = env.action_spec.rand(td1.batch_size)
     _ = critic_net(td1)
-    # _ = critic_net_1(td1)            # init critic
-    # _ = critic_net_2(td1)            # init critic
- # now we initiated td0 and td1 tensordicts
- # TensorDict with keys [\'action\', \'done\', \'is_init\', \'observation\',
- # \'state_action_value1\', \'state_action_value2\', \'step_count\', \'terminated\',
- # \'truncated\']'
 
 
 # Targets
 actor_target = deepcopy(actor_net)
 critic_target = deepcopy(critic_net)
-# critic_1_target = deepcopy(critic_net_1)
-# critic_2_target = deepcopy(critic_net_2)
 
 
 
-
-# qvalue_ensemble = QValueEnsembleModule(critic_net_1, critic_net_2)
-# loss = TD3Loss(
-#     actor_network=Seq(actor_net, tanh_on_action), 
-#     qvalue_network=qvalue_ensemble,
-#     action_spec=env.action_spec,
-#     loss_function="l2",
-#     delay_actor=True,
-#     delay_qvalue=True,
-# )
 loss = TD3Loss(
-    # actor_network=Seq(actor_net, tanh_on_action), 
     actor_network=policy, 
     qvalue_network=critic_net,
     action_spec=env.action_spec,
@@ -215,17 +182,7 @@ for i, data in enumerate(collector):  # Data from env rollouts
         optim_critic.step()
         updater.step() 
 
-        # --- Critic 2 update
-        # optim_critic_2.zero_grad(set_to_none=True)
-        # loss_q2 = loss(td)["loss_qvalue"]
-        # loss_q2.backward()
-        # optim_critic_2.step()
-
         # --- Actor update (delayed)
-        # for p in critic_net_1.parameters():
-        #     p.requires_grad = False
-        # for p in critic_net_2.parameters():
-        #     p.requires_grad = False
         for p in critic_net.parameters():
             p.requires_grad = False
 
@@ -234,24 +191,13 @@ for i, data in enumerate(collector):  # Data from env rollouts
         loss_pi.backward()
         optim_actor.step()
         updater.step() 
-        # for p in critic_net_1.parameters():
-        #     p.requires_grad = True
-        # for p in critic_net_2.parameters():
-        #     p.requires_grad = True
+
         for p in critic_net.parameters():
             p.requires_grad = True
 
         # --- Noise annealing
         exploration_module.step(data.numel())
- 
 
-        # --- Soft update targets
-        # with torch.no_grad():
-            # soft_update(actor_net, actor_target, TAU)
-            # soft_update(critic_net_1, critic_1_target, TAU)
-            # soft_update(critic_net_2, critic_2_target, TAU)
-            # soft_update(critic_net, critic_target, TAU)
-        
     
 
 
