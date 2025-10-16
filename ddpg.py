@@ -27,9 +27,11 @@ on LunarLanderContinuous-v3 environment.
 def soft_update(source, target, tau):
     src_dict = source.state_dict()
     tgt_dict = target.state_dict()
-    for key in src_dict:
-        tgt_dict[key] = tau * src_dict[key] + (1 - tau) * tgt_dict[key]
+    for key in tgt_dict.keys():
+        if key in src_dict:
+            tgt_dict[key] = tau * src_dict[key] + (1 - tau) * tgt_dict[key]
     target.load_state_dict(tgt_dict)
+
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
