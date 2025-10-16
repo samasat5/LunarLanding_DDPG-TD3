@@ -136,14 +136,7 @@ loss = DDPGLoss(
     # delay_actor=True, # for more stability Default is False
     # delay_value=True, # for more stability Default is True
 )
-loss_td3 = TD3Loss(
-    actor_network=policy, # deterministic 
-    qvalue_network=critic,
-    loss_function="l2",
-    action_spec=env.action_spec,
-    # delay_actor=True, # for more stability Default is False
-    # delay_value=True, # for more stability Default is True
-)
+
 
 loss.make_value_estimator(gamma=GAMMA)
 updater = SoftUpdate(loss, tau=TAU)
