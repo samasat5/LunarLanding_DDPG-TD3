@@ -235,11 +235,12 @@ for i, data in enumerate(collector):  # Data from env rollouts
 
 
         # Record TD bias
-        pred_q = loss_out["pred_value"]
+        pred_q1, pred_q2 = loss_out["pred_value"] 
         target_q = loss_out["target_value"]
-        bias_batch = (pred_q - target_q).detach().mean().item()
-        
-        biases.append(bias_batch)
+        bias_q1 = (pred_q1 - target_q).mean().item()
+        bias_q2 = (pred_q2 - target_q).mean().item()
+        bias_avg = (bias_q1 + bias_q2) / 2
+        biases.append(bias_avg)
         
         
         # --- Stats
