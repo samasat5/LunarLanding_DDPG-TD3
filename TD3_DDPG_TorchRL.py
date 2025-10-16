@@ -187,6 +187,8 @@ def train(
     t0 = time.time()
     success_steps, qvalues = [], []
     biases = []
+    eval_rewards = []       
+    eval_steps = []
 
 
     pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True) if method=="DDPG" else tqdm(total=TOTAL_FRAMES, desc="Training TD3", dynamic_ncols=True)
@@ -300,6 +302,8 @@ def train(
                     lens.append(int(td.get("step_count",0)))    
                     rewards.append(episode_reward)
                 mean_reward = sum(rewards) / EVAL_EPISODES
+                eval_rewards.append(mean_reward)
+                eval_steps.append(total_count)
                 torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
             policy.train()
 
@@ -325,6 +329,14 @@ def train(
     plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
     plt.title(f"Training {method} - smoothed Q Values")
     plt.xlabel("Training Steps")
+    plt.show()
+    
+    plt.figure(figsize=(10,5))
+    plt.plot(eval_steps, eval_rewards, label='Mean Evaluation Reward')
+    plt.xlabel('Training Steps')
+    plt.ylabel('Average Reward')
+    plt.title(f'{method} - Evaluation Rewards')
+    plt.legend()
     plt.show()
 
 
