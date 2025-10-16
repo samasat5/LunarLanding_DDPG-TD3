@@ -199,7 +199,11 @@ def train(
             continue
         for _ in range(OPTIM_STEPS):
             td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
-
+            
+            
+            loss_out = loss(td)
+            loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
+            
             # Critic update
             optim_critic.zero_grad(set_to_none=True)
             loss_q.backward()
