@@ -247,8 +247,6 @@ window = 200  # adjust for smoothing strength
 smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
 
 plt.figure(figsize=(12,5))
-plt.plot(smooth_bias, label="TD smoothed Bias")
-plt.plot(qvalues, label="Q Value Loss")
 plt.legend()
 plt.title("Training Diagnostics")
 plt.xlabel("Training Steps")
