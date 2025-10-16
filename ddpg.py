@@ -161,8 +161,8 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 )
 
 # 7. Optimizers
-optim_actor = optim.Adam(policy.parameters(), lr=5e-4)
-optim_critic = optim.Adam(critic.parameters(), lr=5e-4)
+optim_actor = optim.Adam(policy.parameters(), lr=6e-4)
+optim_critic = optim.Adam(critic.parameters(), lr=6e-4)
 
 # 8. Training loop
 total_count = 0
@@ -270,6 +270,6 @@ plt.figure(figsize=(12,5))
 plt.plot(smooth_bias, label="TD smoothed Bias")
 # plt.plot(qvalues, label="Q Value Loss")
 plt.legend()
-plt.title("Training Diagnostics")
+plt.title("Training DDPG")
 plt.xlabel("Training Steps")
 plt.show()
