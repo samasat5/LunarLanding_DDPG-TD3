@@ -33,7 +33,7 @@ def soft_update(source, target, tau):
     
 # configurations
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 100_000
+TOTAL_FRAMES = 20_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -130,7 +130,7 @@ with torch.no_grad():
 
 
 # Targets
-actor_target = deepcopy(actor_net) # no noise in target
+actor_target = deepcopy(policy) # no noise in target
 critic_1_target = deepcopy(critic_net_1)
 critic_2_target = deepcopy(critic_net_2)
 
