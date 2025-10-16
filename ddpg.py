@@ -86,7 +86,7 @@ tanh_on_action = TDM(nn.Tanh(), in_keys=["action_raw"], out_keys=["action"])
 exploration_module = OUNoise(
     spec=env.action_spec,
     theta=0.15,
-    sigma=0.2,
+    sigma=0.1,
     dt=1e-2,
 )
 # mettre en place gaussian noise
