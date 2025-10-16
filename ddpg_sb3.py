@@ -5,6 +5,7 @@ from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckA
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.env_util import make_vec_env  
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
@@ -22,10 +23,8 @@ EVAL_EPISODES = 3
 DEVICE = "auto" 
 
 
-env = Monitor(gym.make("LunarLanderContinuous-v3"))
-eval_env = Monitor(gym.make("LunarLanderContinuous-v3")) # use a separate environment for training and eval to avoid training bias
-env.reset(seed=0)
-eval_env.reset(seed=0)
+env = make_vec_env("LunarLanderContinuous-v3")
+eval_env = make_vec_env("LunarLanderContinuous-v3") # use a separate environment for training and eval to avoid training bias
 
 # The noise objects for DDPG
 n_actions = env.action_space.shape[-1]
