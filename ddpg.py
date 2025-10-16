@@ -3,6 +3,7 @@ import time
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import torch
+from tqdm import tqdm
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
 from torchrl.collectors import SyncDataCollector
@@ -74,15 +75,16 @@ actor_mlp = MLP(
 actor = TDM(actor_mlp, in_keys=["observation"], out_keys=["action_raw"])
 # Wrap Tanh so it applies to the "action" tensor 
 tanh_on_action = TDM(nn.Tanh(), in_keys=["action_raw"], out_keys=["action"])
-policy = Seq(actor, tanh_on_action, selected_out_keys=["action"])   # final tanh ensures [-1, 1] range
-ou_noise = OUNoise(
+exploration_module = OUNoise(
     spec=env.action_spec,
     theta=0.15,
     sigma=0.2,
     dt=1e-2,
 )
 # mettre en place gaussian noise
-rollout_policy = Seq(policy, ou_noise) # à vérifier de ne pas dépasser les bornes de l'espace des actions?????
+# rollout_policy = Seq(policy, exploration_module) # à vérifier de ne pas dépasser les bornes de l'espace des actions?????
+policy = Seq(actor, tanh_on_action, selected_out_keys=["action"])   # deterministic policy
+rollout_policy = Seq(actor, tanh_on_action, exploration_module)      # stochastic policy with exploration noise
 
 # 3. Critic (action value function)
 critic_mlp = MLP(
@@ -145,12 +147,16 @@ total_episodes = 0
 t0 = time.time()
 success_steps, qvalues = [], []
 
-# add tqdm
+
+
+pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True)
 for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
     replay_buffer.extend(data) # add data to the replay buffer
     max_length = replay_buffer[:]["next", "step_count"].max()
     # pdb.set_trace()
-    if len(replay_buffer) <= INIT_RAND_STEPS: continue
+    if len(replay_buffer) <= INIT_RAND_STEPS: 
+        pbar.update(data.numel())
+        continue
     for _ in range(OPTIM_STEPS):
         # if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
         #     break
@@ -172,20 +178,27 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         updater.step()
         for p in critic.parameters(): p.requires_grad = True
 
-        ou_noise.step(data.numel()) # make the noise decay over time
-
-        # Update target params
-        updater.step()
-        #pdb.set_trace()
+        # ou_noise.step(data.numel()) # make the noise decay over time
 
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
-        qvalues.append(loss(td)["loss_value"].item()) # loss_q or loss(td)
+        
+        qvalues.append(loss(td)["loss_value"].item())  #TODO
+        # qvalues.append(loss(td)["pred_value"].mean().item())
+
     success_steps.append(max_length)
+    total_count += data.numel()
+    total_episodes += data["next", "done"].sum().item()
+    pbar.set_postfix({
+        "Steps": total_count,
+        "Episodes": total_episodes,
+        "Mean Q": f"{torch.tensor(qvalues[-50:]).mean().item():.2f}"
+    })
+    pbar.update(data.numel())
 
     if total_count % LOG_EVERY == 0:
-        torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
-    
+        torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
+        # torchrl_logger.info(f"Steps: {total_count}, Episodes: {total_episodes}, Max Ep Len: {max_length}, ReplayBuffer: {len(replay_buffer)}, Q: {torch.tensor(qvalues[-50:]).item():.3f} [END]")
     if total_count % EVAL_EVERY < FRAMES_PER_BATCH: # A vérifier
         policy.eval()
         with torch.no_grad():
@@ -206,7 +219,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
             torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
         policy.train()
 
-
+pbar.close()
 t1 = time.time()
 print(f"Training took {t1-t0:.2f}s")
 torchrl_logger.info(

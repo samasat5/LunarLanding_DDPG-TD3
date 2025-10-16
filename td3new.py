@@ -1,12 +1,13 @@
 import time
 from copy import deepcopy
+import numpy as np
 import pdb
 import torchrl
 import matplotlib.pyplot as plt
 from tensordict import TensorDict
 from torchrl.envs import GymEnv, StepCounter, TransformedEnv
 from tensordict.nn import TensorDictModule as TDM, TensorDictSequential as Seq
-from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP, EGreedyModule
+from torchrl.modules import OrnsteinUhlenbeckProcessModule as OUNoise, MLP, EGreedyModule, QValueModule
 from torchrl.objectives import DQNLoss, SoftUpdate, DDPGLoss,TD3Loss
 from torchrl.collectors import SyncDataCollector
 from torchrl.data import LazyTensorStorage, ReplayBuffer, RandomSampler
@@ -16,8 +17,20 @@ import torch
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
 from torchrl.envs.utils import check_env_specs
+from utils2 import MultiCriticSoftUpdate, soft_update, QValueEnsembleModule
+from tqdm import tqdm
 
 
+
+@torch.no_grad()
+def soft_update(source, target, tau):
+    src_dict = source.state_dict()
+    tgt_dict = target.state_dict()
+    for key in src_dict:
+        tgt_dict[key] = tau * src_dict[key] + (1 - tau) * tgt_dict[key]
+    target.load_state_dict(tgt_dict)
+    
+    
 # configurations
 INIT_RAND_STEPS = 5000 
 TOTAL_FRAMES = 50_000
@@ -97,17 +110,12 @@ exploration_module = OUNoise(
     sigma=0.2,
     dt=1e-2,
 )
-rollout_policy = Seq(actor_net, exploration_module)
-
-# Targets
-actor_target = deepcopy(actor_net) # no noise in target
-critic_1_target = deepcopy(critic_net_1)
-critic_2_target = deepcopy(critic_net_2)
+rollout_policy = Seq(actor_net, tanh_on_action, exploration_module)
 
 
 # TD3 Loss
-# 4. DDPG loss module
-# --- 4) Warm-up forward to initialize lazy modules BEFORE loss/opt
+# --- 4) Warm-up 
+# initiate the TensorDict objects by passing some data through the modules
 with torch.no_grad():
     td0 = env.reset()          # has "observation"
     _ = policy(td0.clone())    # init actor
@@ -115,17 +123,34 @@ with torch.no_grad():
     td1["action"] = env.action_spec.rand(td1.batch_size)
     _ = critic_net_1(td1)            # init critic
     _ = critic_net_2(td1)            # init critic
+ # now we initiated td0 and td1 tensordicts
+ # TensorDict with keys [\'action\', \'done\', \'is_init\', \'observation\',
+ # \'state_action_value1\', \'state_action_value2\', \'step_count\', \'terminated\',
+ # \'truncated\']'
 
+
+# Targets
+actor_target = deepcopy(actor_net) # no noise in target
+critic_1_target = deepcopy(critic_net_1)
+critic_2_target = deepcopy(critic_net_2)
+
+
+
+
+qvalue_ensemble = QValueEnsembleModule(critic_net_1, critic_net_2)
 loss = TD3Loss(
-    actor_network=actor_net,    
-    qvalue_network=[critic_net_1, critic_net_2],   
-    action_spec=env.action_spec,       
+    actor_network=Seq(actor_net, tanh_on_action), 
+    qvalue_network=qvalue_ensemble,
+    action_spec=env.action_spec,
     loss_function="l2",
-    delay_actor=True,            
-    delay_qvalue=True, 
+    delay_actor=True,
+    delay_qvalue=True,
 )
+
+
+
+        
 loss.make_value_estimator(gamma=GAMMA)
-updater = SoftUpdate(loss, tau=TAU) # for updating target networks
 
 # Collect the data from the agent’s interactions with the environment
 collector = SyncDataCollector(
@@ -151,61 +176,80 @@ optim_critic_2 = optim.Adam(critic_net_2.parameters(), lr=1e-3)
 total_count = 0
 total_episodes = 0
 t0 = time.time()
-success_steps, qvalues = []
+success_steps = []
+qvalues = []
 
-# add tqdm
-for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
-    replay_buffer.extend(data) # add data to the replay buffer
+num_batches = TOTAL_FRAMES // FRAMES_PER_BATCH
+pbar = tqdm(total=num_batches, desc="Training TD3", dynamic_ncols=True)
+
+for i, data in enumerate(collector):  # Data from env rollouts
+    replay_buffer.extend(data)
     max_length = replay_buffer[:]["next", "step_count"].max()
-    # pdb.set_trace()
-    if len(replay_buffer) <= INIT_RAND_STEPS: continue
+
+    if len(replay_buffer) <= INIT_RAND_STEPS:
+        pbar.update(1)
+        continue
+
     for _ in range(OPTIM_STEPS):
-        # if len(replay_buffer) < REPLAY_BUFFER_SAMPLE:
-        #     break
         td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
 
-        # Critic update
+        # --- Critic 1 update
         optim_critic_1.zero_grad(set_to_none=True)
-        loss_q = loss(td)["loss_value"]
-        loss_q.backward()
+        loss_q1 = loss(td)["loss_qvalue"]
+        loss_q1.backward()
         optim_critic_1.step()
-        updater.step()
 
+        # --- Critic 2 update
         optim_critic_2.zero_grad(set_to_none=True)
-        loss_q = loss(td)["loss_value"]
-        loss_q.backward()
+        loss_q2 = loss(td)["loss_qvalue"]
+        loss_q2.backward()
         optim_critic_2.step()
-        updater.step()
 
-        # Actor update (freeze critic params or detach inside loss)
-        for p in critic_net_1.parameters(): p.requires_grad = False
-        for p in critic_net_2.parameters(): p.requires_grad = False
+        # --- Actor update (delayed)
+        for p in critic_net_1.parameters():
+            p.requires_grad = False
+        for p in critic_net_2.parameters():
+            p.requires_grad = False
+
         optim_actor.zero_grad(set_to_none=True)
         loss_pi = loss(td)["loss_actor"]
         loss_pi.backward()
         optim_actor.step()
-        updater.step()
-        for p in critic_net_1.parameters(): p.requires_grad = True
-        for p in critic_net_2.parameters(): p.requires_grad = True
 
-        exploration_module.step(data.numel()) # make the noise decay over time
+        for p in critic_net_1.parameters():
+            p.requires_grad = True
+        for p in critic_net_2.parameters():
+            p.requires_grad = True
 
-        # Update target params
-        updater.step()
-        #pdb.set_trace()
+        # --- Noise annealing
+        exploration_module.step(data.numel())
 
+        # --- Soft update targets
+        with torch.no_grad():
+            soft_update(actor_net, actor_target, TAU)
+            soft_update(critic_net_1, critic_1_target, TAU)
+            soft_update(critic_net_2, critic_2_target, TAU)
+
+        # --- Stats
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
-        qvalues.append(loss(td)["loss_value"].item()) # loss_q or loss(td)
+        qvalues.append((loss_q1.item() + loss_q2.item()) / 2) #TODO
+
     success_steps.append(max_length)
 
+    # --- Logging
     if total_count % LOG_EVERY == 0:
-        torchrl_logger.info(f"Successful steps in the last episode: {max_length}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
-    
-    if total_count % EVAL_EVERY < FRAMES_PER_BATCH: # A vérifier
+        torchrl_logger.info(
+            f"Steps: {total_count}, Episodes: {total_episodes}, Max Ep Len: {max_length}, "
+            f"ReplayBuffer: {len(replay_buffer)}, MeanQ: {np.mean(qvalues[-50:]):.3f}"
+        )
+
+    # --- Eval
+    if total_count % EVAL_EVERY < FRAMES_PER_BATCH:
         policy.eval()
         with torch.no_grad():
-            rewards, lens = [], []
+            rewards = []
+            lens = []
             for _ in range(EVAL_EPISODES):
                 td = eval_env.reset()
                 done = False
@@ -216,23 +260,29 @@ for i, data in enumerate(collector): # runs through the data collected from the 
                     episode_reward += td["next", "reward"].item()
                     done = td["next", "done"].item()
                     td = td.get("next")
-                lens.append(int(td.get("step_count",0)))    
+                lens.append(int(td.get("step_count", 0)))
                 rewards.append(episode_reward)
-            mean_reward = sum(rewards) / EVAL_EPISODES
-            torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
+
+            mean_reward = np.mean(rewards)
+            torchrl_logger.info(f"[Eval] Mean reward: {mean_reward:.2f}")
         policy.train()
 
+    # --- Update tqdm bar
+    pbar.set_description(f"Frames: {total_count} | Episodes: {total_episodes} | Mean Q: {np.mean(qvalues[-50:]):.3f}")
+    pbar.update(1)
 
+# --- End training
+pbar.close()
 t1 = time.time()
-print(f"Training took {t1-t0:.2f}s")
-torchrl_logger.info(
-    f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
-)
 
-plt.figure(figsize=(10,5))
-plt.title("QValues per episode")
+print(f"\nTraining completed in {t1 - t0:.2f}s")
+torchrl_logger.info(f"Solved after {total_count} steps, {total_episodes} episodes, time {t1 - t0:.2f}s")
+
+# --- Plot results
+plt.figure(figsize=(10, 5))
+plt.title("Average Q-values over training")
 plt.xlabel("Steps")
-plt.ylabel("QValues")
+plt.ylabel("Q-value")
 plt.plot(qvalues)
+plt.grid(True)
 plt.show()
-
