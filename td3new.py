@@ -84,15 +84,13 @@ act_dim = env.action_spec.shape[-1] #action_spec : the action space
 
 
 # Critic
-critic_mlp_1 = MLP(
-    out_features=1, 
-    num_cells=[MLP_SIZE, MLP_SIZE],
-    activation_class=nn.ReLU,
-    activate_last_layer=False
-)
-critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value1"]) 
-critic_mlp_2 = deepcopy(critic_mlp_1)
-critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value2"])      
+# critic_mlp_1 = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE],activation_class=nn.ReLU,activate_last_layer=False)
+# critic_net_1 = TDM(critic_mlp_1, in_keys=["observation", "action"], out_keys=["state_action_value1"]) 
+# critic_mlp_2 = deepcopy(critic_mlp_1)
+# critic_net_2 = TDM(critic_mlp_2, in_keys=["observation", "action"], out_keys=["state_action_value2"])      
+critic_mlp = MLP(out_features=1, num_cells=[MLP_SIZE, MLP_SIZE],activation_class=nn.ReLU,activate_last_layer=False)
+critic_net = TDM(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value1"]) 
+
 
 
 #  Actor
@@ -122,8 +120,9 @@ with torch.no_grad():
     _ = policy(td0.clone())    # init actor
     td1 = td0.clone()
     td1["action"] = env.action_spec.rand(td1.batch_size)
-    _ = critic_net_1(td1)            # init critic
-    _ = critic_net_2(td1)            # init critic
+    _ = critic_net(td1)
+    # _ = critic_net_1(td1)            # init critic
+    # _ = critic_net_2(td1)            # init critic
  # now we initiated td0 and td1 tensordicts
  # TensorDict with keys [\'action\', \'done\', \'is_init\', \'observation\',
  # \'state_action_value1\', \'state_action_value2\', \'step_count\', \'terminated\',
@@ -132,8 +131,9 @@ with torch.no_grad():
 
 # Targets
 actor_target = deepcopy(actor_net) # no noise in target
-critic_1_target = deepcopy(critic_net_1)
-critic_2_target = deepcopy(critic_net_2)
+critic_target = deepcopy(critic_net)
+# critic_1_target = deepcopy(critic_net_1)
+# critic_2_target = deepcopy(critic_net_2)
 
 
 
