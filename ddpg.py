@@ -112,7 +112,8 @@ critic_mlp = MLP(
 critic = TDM(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
 
 # Target Networks
-actor_target = deepcopy(policy) 
+# actor_target = deepcopy(policy)  #TODO
+actor_target = deepcopy(actor) 
 critic_target = deepcopy(critic)
 
 # 4. DDPG loss module
