@@ -121,8 +121,8 @@ loss = DDPGLoss(
     actor_network=policy, # deterministic 
     value_network=critic,
     loss_function="l2",
-    # delay_actor=True, # for more stability 
-    # delay_value=True,
+    # delay_actor=True, # for more stability Default is False
+    # delay_value=True, # for more stability Default is True
 )
 loss.make_value_estimator(gamma=GAMMA)
 updater = SoftUpdate(loss, tau=TAU)
