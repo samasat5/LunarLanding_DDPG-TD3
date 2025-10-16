@@ -29,6 +29,7 @@ def soft_update(source, target, tau):
     for key in src_dict:
         tgt_dict[key] = tau * src_dict[key] + (1 - tau) * tgt_dict[key]
     target.load_state_dict(tgt_dict)
+    pdb.set_trace()
     
     
 # configurations
@@ -225,7 +226,7 @@ for i, data in enumerate(collector):  # Data from env rollouts
 
         # --- Noise annealing
         exploration_module.step(data.numel())
-        pdb.set_trace()
+ 
 
         # --- Soft update targets
         with torch.no_grad():
