@@ -96,7 +96,7 @@ exploration_module = OUNoise(
     dt=1e-2,
 )
 rollout_policy = Seq(actor_net, tanh_on_action, exploration_module)
-
+actor_for_loss = Seq(actor_net, tanh_on_action)
 
 # TD3 Loss
 # --- 4) Warm-up 
@@ -116,7 +116,7 @@ critic_target = deepcopy(critic_net)
 
 
 loss = TD3Loss(
-    actor_network=policy, 
+    actor_network=actor_for_loss,  #TODO
     qvalue_network=critic_net,
     action_spec=env.action_spec,
     loss_function="l2",
