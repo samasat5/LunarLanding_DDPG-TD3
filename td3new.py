@@ -225,6 +225,7 @@ for i, data in enumerate(collector):  # Data from env rollouts
 
         # --- Noise annealing
         exploration_module.step(data.numel())
+        pdb.set_trace()
 
         # --- Soft update targets
         with torch.no_grad():
