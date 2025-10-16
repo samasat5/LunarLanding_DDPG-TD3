@@ -26,13 +26,13 @@ MLP_SIZE = 256
 TAU = 0.005
 GAMMA = 0.99
 EVAL_EVERY = 10_000   # frames
-EVAL_EPISODES = 3
+EVAL_EPISODES = 10
 DEVICE = "auto" 
 
 
-env = make_vec_env("LunarLanderContinuous-v3", n_envs=8, seed=0)
+env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=0)
 env = VecNormalize(env, norm_obs=True, norm_reward=True)
-eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=8, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
+eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
 eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False) # do not normalize rewards for eval env
 
 eval_env.obs_rms = env.obs_rms
@@ -40,13 +40,16 @@ eval_env.obs_rms = env.obs_rms
 
 # The noise objects for TD3
 n_actions = env.action_space.shape[-1]
-action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+action_noise = NormalActionNoise(
+    mean=np.zeros(n_actions), 
+    sigma=0.1 * np.ones(n_actions)
+)
 
 logger = configure("./logs_td3/", ["stdout", "csv", "tensorboard"])
 eval_callback = EvalCallback( # The callback runs episodes on eval_env every EVAL_EVERY steps and saves the best model.
     eval_env,
-    best_model_save_path="./td3_best",
-    log_path="./td3_eval",
+    # best_model_save_path="./td3_best",
+    # log_path="./td3_eval",
     eval_freq=EVAL_EVERY,
     n_eval_episodes=EVAL_EPISODES,
     deterministic=True,
@@ -71,6 +74,7 @@ model = TD3(
     train_freq=FRAMES_PER_BATCH,
     gradient_steps=OPTIM_STEPS,
     learning_starts=INIT_RAND_STEPS,
+    #policy_delay=??
     policy_kwargs=dict(net_arch=dict(pi=[400, 300], qf=[400, 300])),
 )
 model.set_logger(logger)
@@ -81,11 +85,10 @@ model.learn(
     progress_bar=True,
 )# train the agent, collects rollouts and optimizes the actor and critic networks
 model.save("td3_lunarlander")
-model = TD3.load("td3_lunarlander")
+#model = TD3.load("td3_lunarlander")
 
 eval_env.close()
 env.close()
 
 if __name__ == "__main__":
-    eval_path = "./td3_eval/evaluations.npz"
     plot_qbias_td3()
