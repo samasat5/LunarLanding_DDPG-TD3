@@ -202,6 +202,7 @@ def train(
 
             # Critic update
             loss_out = loss(td)
+            loss_pi = loss_out["loss_actor"]
             optim_critic.zero_grad(set_to_none=True)
             if method == "TD3": # TD3Loss
                 loss_q = loss_out["loss_qvalue"]
@@ -214,7 +215,6 @@ def train(
             # Actor update (freeze critic params or detach inside loss)
             for p in critic.parameters(): p.requires_grad = False
             optim_actor.zero_grad(set_to_none=True)
-            loss_pi = loss_out["loss_actor"]
             loss_pi.backward()
             optim_actor.step()
             # updater.step()  
