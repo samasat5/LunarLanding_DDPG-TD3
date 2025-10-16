@@ -15,7 +15,8 @@ class QBiasLoggerDDPG(BaseCallback):
                     "timesteps",
                     "mean_bias",
                     "mean_abs_bias",
-                    "std_bias"
+                    "std_bias",
+                    "q_values",
                 ])
 
     def _on_step(self) -> bool:
@@ -60,13 +61,15 @@ class QBiasLoggerDDPG(BaseCallback):
         mean_bias = float(np.mean(bias))
         mean_abs  = float(np.mean(np.abs(bias)))
         std_bias  = float(np.std(bias))
+        q_values = float(np.mean(q.cpu().numpy()))
 
+        self.logger.record("q_bias/q_values", q_values)
         self.logger.record("q_bias/mean", mean_bias)
         self.logger.record("q_bias/mean_abs", mean_abs)
         self.logger.record("q_bias/std", std_bias)
 
         with open(self.save_csv, "a", newline="") as f:
-            csv.writer(f).writerow([self.num_timesteps, mean_bias, mean_abs, std_bias])
+            csv.writer(f).writerow([self.num_timesteps, mean_bias, mean_abs, std_bias, q_values])
 
         return True
     
@@ -196,7 +199,7 @@ class QBiasLoggerTD3(BaseCallback):
         return True
     
 
-def plot_qbias_ddpg(csv_path="./logs_ddpg/qbias/qbias_log.csv", save_path=None):
+def plot_qbias_ddpg(csv_path="./logs_ddpg/qbias/qbias_log.csv"):
     """
     Read the q-bias CSV saved by QBiasLoggerDDPG and plot the mean, |mean| and std.
 
@@ -214,6 +217,7 @@ def plot_qbias_ddpg(csv_path="./logs_ddpg/qbias/qbias_log.csv", save_path=None):
     mean_bias = data["mean_bias"]
     mean_abs = data["mean_abs_bias"]
     std_bias = data["std_bias"]
+    mean_q = data["q_values"]
 
     plt.figure(figsize=(7, 4))
     plt.plot(timesteps, mean_bias, label="mean(Q - target)")
@@ -225,13 +229,27 @@ def plot_qbias_ddpg(csv_path="./logs_ddpg/qbias/qbias_log.csv", save_path=None):
     plt.grid(True, alpha=0.3)
     plt.legend()
 
-    if save_path is None:
-        save_path = os.path.join(os.path.dirname(csv_path), "qbias_plot.png")
+    save_path = os.path.join(os.path.dirname(csv_path), "qbias_plot.png")
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=200)
     plt.close()
-    print(f"Q-bias plot saved at: {save_path}")
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(timesteps, mean_q, label="mean Q-values")
+    plt.xlabel("Timesteps")
+    plt.ylabel("Q-value")
+    plt.title("DDPG Q-value vs Timesteps")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+
+    save_path = os.path.join(os.path.dirname(csv_path), "qvalue_plot.png")
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=200)
+    plt.close()
+
+    print(f"Q-bias plot and Q-value plot saved at: {save_path}")
     return save_path
 
 def plot_qbias_td3(csv_path="./logs_td3/qbias/qbias_log.csv", save_path=None):
