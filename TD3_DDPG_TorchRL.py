@@ -225,7 +225,46 @@ def train(
             updater.step()
             
             
-            
+            # diagnostics (run for a few iterations)
+            with torch.no_grad():
+                # sampled rewards in the batch
+                r = td.get(("next", "reward"), td.get("reward"))
+                print("Reward mean/min/max:", r.mean().item(), r.min().item(), r.max().item())
+
+                # preds / target from loss_out
+                pv = loss_out["pred_value"]
+                tv = loss_out["target_value"]
+                if isinstance(pv, (tuple, list)):
+                    p1, p2 = pv[0].detach(), pv[1].detach()
+                    print("Pred1 mean/min/max:", p1.mean().item(), p1.min().item(), p1.max().item())
+                    print("Pred2 mean/min/max:", p2.mean().item(), p2.min().item(), p2.max().item())
+                else:
+                    p = pv.detach()
+                    print("Pred mean/min/max:", p.mean().item(), p.min().item(), p.max().item())
+
+                print("Target mean/min/max:", tv.mean().item(), tv.min().item(), tv.max().item())
+                print("target requires_grad?", tv.requires_grad)
+
+                # actions from the behavior (in the sampled batch) and actions from current policy
+                if ("action" in td.keys()):
+                    a = td["action"]
+                    print("Sampled action mean/min/max:", a.mean().item(), a.min().item(), a.max().item())
+
+                # current policy action for same obs (nd = copy of batch obs)
+                try:
+                    obs_keys = [k for k in td.keys() if "observation" in str(k)]
+                    obs_key = obs_keys[0] if obs_keys else "observation"
+                    obs_batch = td.get(obs_key)
+                    # compute policy action on that batch
+                    td_policy = td.clone()
+                    td_policy = td_policy.to(next(policy.parameters()).device)
+                    td_policy = policy(td_policy)
+                    pa = td_policy["action"]
+                    print("Policy action mean/min/max:", pa.mean().item(), pa.min().item(), pa.max().item())
+                except Exception as e:
+                    print("Policy action comput error:", e)
+     
+
             
             
             
