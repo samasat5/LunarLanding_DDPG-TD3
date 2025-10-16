@@ -216,8 +216,7 @@ def train(
             for p in critic.parameters(): p.requires_grad = False
             optim_actor.zero_grad(set_to_none=True)
             loss_pi.backward()
-            optim_actor.step()
-            # updater.step()  
+            optim_actor.step() 
             for p in critic.parameters(): p.requires_grad = True
         
             # Record TD bias
