@@ -180,8 +180,6 @@ for i, data in enumerate(collector): # runs through the data collected from the 
 
         # ou_noise.step(data.numel()) # make the noise decay over time
 
-
-
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
         
