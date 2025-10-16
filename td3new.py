@@ -246,7 +246,8 @@ for i, data in enumerate(collector):  # Data from env rollouts
         # --- Stats
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
-        qvalues.append((pred_q1 + pred_q1) / 2) 
+        # qvalues.append((pred_q1 + pred_q2) / 2) 
+        qvalues.append(((pred_q1 + pred_q2) / 2).mean().item())
         # pdb.set_trace()
 
     success_steps.append(max_length)
@@ -302,6 +303,7 @@ plt.figure(figsize=(10, 5))
 window = 200  # adjust for smoothing strength
 smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
 plt.legend()
+plt.plot(smooth_bias, label="TD smoothed Bias")
 plt.title("Training TD3")
 plt.xlabel("Training Steps")
 plt.show()
