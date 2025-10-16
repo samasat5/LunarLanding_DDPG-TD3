@@ -199,9 +199,8 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
         
-        qvalues.append(loss(td)["loss_value"].item())  #TODO
-        qvalues.append(loss(td)["loss_value"].item())  #TODO
-        pred_q.mean().item()
+        # qvalues.append(loss(td)["loss_value"].item())  #TODO
+        qvalues.append(loss(td)["pred_value"].mean().item())  #TODO
         # qvalues.append(loss(td)["pred_value"].mean().item())
         # pdb.set_trace()
 
