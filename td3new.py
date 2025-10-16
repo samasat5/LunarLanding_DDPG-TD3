@@ -157,7 +157,7 @@ loss = TD3Loss(
 )
 
 
-
+updater = SoftUpdate(loss, tau=TAU)
         
 loss.make_value_estimator(gamma=GAMMA)
 
@@ -212,6 +212,7 @@ for i, data in enumerate(collector):  # Data from env rollouts
         loss_q1.backward()
         # optim_critic_1.step()
         optim_critic.step()
+        updater.step() 
 
         # --- Critic 2 update
         # optim_critic_2.zero_grad(set_to_none=True)
@@ -231,10 +232,12 @@ for i, data in enumerate(collector):  # Data from env rollouts
         loss_pi = loss(td)["loss_actor"]
         loss_pi.backward()
         optim_actor.step()
-
-        for p in critic_net_1.parameters():
-            p.requires_grad = True
-        for p in critic_net_2.parameters():
+        updater.step() 
+        # for p in critic_net_1.parameters():
+        #     p.requires_grad = True
+        # for p in critic_net_2.parameters():
+        #     p.requires_grad = True
+        for p in critic_net.parameters():
             p.requires_grad = True
 
         # --- Noise annealing
@@ -242,11 +245,13 @@ for i, data in enumerate(collector):  # Data from env rollouts
  
 
         # --- Soft update targets
-        with torch.no_grad():
-            soft_update(actor_net, actor_target, TAU)
-            soft_update(critic_net_1, critic_1_target, TAU)
-            soft_update(critic_net_2, critic_2_target, TAU)
-
+        # with torch.no_grad():
+            # soft_update(actor_net, actor_target, TAU)
+            # soft_update(critic_net_1, critic_1_target, TAU)
+            # soft_update(critic_net_2, critic_2_target, TAU)
+            # soft_update(critic_net, critic_target, TAU)
+        
+    
 
 
         # Record TD bias
