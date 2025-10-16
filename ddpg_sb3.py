@@ -9,9 +9,9 @@ from stable_baselines3.common.env_util import make_vec_env
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
-TOTAL_FRAMES = 100_000
-FRAMES_PER_BATCH = 100
-OPTIM_STEPS = 10
+TOTAL_FRAMES = 1_000_000
+FRAMES_PER_BATCH = 1 #100 train freq
+OPTIM_STEPS =  1#10 gradient steps
 BUFFER_LEN = 1_000_000
 REPLAY_BUFFER_SAMPLE = 256
 LOG_EVERY = 1_000
@@ -23,8 +23,8 @@ EVAL_EPISODES = 3
 DEVICE = "auto" 
 
 
-env = make_vec_env("LunarLanderContinuous-v3")
-eval_env = make_vec_env("LunarLanderContinuous-v3") # use a separate environment for training and eval to avoid training bias
+env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=0)
+eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
 
 # The noise objects for DDPG
 n_actions = env.action_space.shape[-1]
@@ -65,25 +65,25 @@ model = DDPG(
     train_freq=FRAMES_PER_BATCH,
     gradient_steps=OPTIM_STEPS,
     learning_starts=INIT_RAND_STEPS,
-    policy_kwargs=dict(net_arch=[MLP_SIZE, MLP_SIZE]), # Note that for DDPG/TD3, the default architecture is [400, 300]
+    policy_kwargs=dict(net_arch=[400, 300]), # Note that for DDPG/TD3, the default architecture is [400, 300]
 )
 model.set_logger(logger)
 model.learn(total_timesteps=TOTAL_FRAMES, log_interval=LOG_EVERY, callback=eval_callback) # train the agent
 model.save("ddpg_lunarlander")
 
-vec_env = model.get_env() # returns the correct environment
+#vec_env = model.get_env() # returns the correct environment
 
 model = DDPG.load("ddpg_lunarlander")
 
 episodes = 10  
 for ep in range(episodes):  
-    obs = vec_env.reset()  
+    obs = eval_env.reset()  
     done = False  
     while not done:  
         action, _states = model.predict(obs, deterministic=True)  
-        obs, rewards, dones, info = vec_env.step(action)  
-        vec_env.render()  
+        obs, rewards, dones, info = eval_env.step(action)  
+        eval_env.render()  
         done = dones[0]  # Extract boolean from array  
   
-vec_env.close()
+eval_env.close()
 env.close()
