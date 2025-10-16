@@ -30,19 +30,10 @@ TD3 (twin critics + clipped double-Q + target smoothing + delayed actor updates)
 on LunarLanderContinuous-v3 environment.
 """
 
-@torch.no_grad()
-def soft_update(source, target, tau):
-    src_dict = source.state_dict()
-    tgt_dict = target.state_dict()
-    for key in tgt_dict.keys():
-        if key in src_dict:
-            tgt_dict[key] = tau * src_dict[key] + (1 - tau) * tgt_dict[key]
-    target.load_state_dict(tgt_dict)
-
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 100_000
+TOTAL_FRAMES = 20_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -141,8 +132,8 @@ loss_td3 = TD3Loss(
     qvalue_network=critic,
     loss_function="l2",
     action_spec=env.action_spec,
-    # delay_actor=True, # for more stability Default is False
-    # delay_value=True, # for more stability Default is True
+    delay_actor=True, # for more stability Default is False
+    delay_value=True, # for more stability Default is True
 )
 
 
@@ -213,20 +204,20 @@ def train(
             loss_out = loss(td)
             optim_critic.zero_grad(set_to_none=True)
             if method == "TD3": # TD3Loss
-                loss_q = loss(td)["loss_qvalue"]
+                loss_q = loss_out["loss_qvalue"]
             else:                # DDPGLoss
-                loss_q = loss(td)["loss_value"]
+                loss_q = loss_out["loss_value"]
             loss_q.backward()
             optim_critic.step()
-            updater.step()  # TODO
+            updater.step() 
 
             # Actor update (freeze critic params or detach inside loss)
             for p in critic.parameters(): p.requires_grad = False
             optim_actor.zero_grad(set_to_none=True)
-            loss_pi = loss(td)["loss_actor"]
+            loss_pi = loss_out["loss_actor"]
             loss_pi.backward()
             optim_actor.step()
-            updater.step()  
+            # updater.step()  
             for p in critic.parameters(): p.requires_grad = True
         
             # Record TD bias
