@@ -341,6 +341,8 @@ def train(
     plt.legend()
     plt.grid(True)
     plt.show()
+    
+    return eval_steps, eval_rewards
 
 
 
