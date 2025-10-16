@@ -35,7 +35,7 @@ def soft_update(source, target, tau):
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 100_000
+TOTAL_FRAMES = 20_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -191,7 +191,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         loss_q = loss(td)["loss_value"]
         loss_q.backward()
         optim_critic.step()
-        # updater.step()  # TODO
+        updater.step()  # TODO
 
         # Actor update (freeze critic params or detach inside loss)
         for p in critic.parameters(): p.requires_grad = False
@@ -199,13 +199,13 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         loss_pi = loss(td)["loss_actor"]
         loss_pi.backward()
         optim_actor.step()
-        # updater.step()  # TODO
+        updater.step()  # TODO
         for p in critic.parameters(): p.requires_grad = True
         
-                # --- Soft update targets
-        with torch.no_grad():
-            soft_update(actor, actor_target, TAU)
-            soft_update(critic, critic_target, TAU)
+        # # --- Soft update targets
+        # with torch.no_grad():
+        #     soft_update(actor, actor_target, TAU)
+        #     soft_update(critic, critic_target, TAU)
 
 
         # Record TD bias
