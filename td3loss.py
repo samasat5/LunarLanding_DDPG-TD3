@@ -160,8 +160,8 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 )
 
 # 7. Optimizers
-optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
-optim_critic = optim.Adam(critic.parameters(), lr=1e-4)
+optim_actor = optim.Adam(policy.parameters(), lr=2e-5)
+optim_critic = optim.Adam(critic.parameters(), lr=2e-5)
 
 
 def train(
@@ -238,7 +238,7 @@ def train(
             total_episodes += data["next", "done"].sum()
             
             
-            qvalues.append(loss(td)["pred_value"].mean().item()) 
+            qvalues.append(loss_out["pred_value"].mean().item()) 
 
 
         success_steps.append(max_length)
@@ -283,7 +283,12 @@ def train(
     )
     window = 200  # adjust for smoothing strength
     smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
-
+    plt.figure(figsize=(12,5))
+    plt.plot(biases, label="TD smoothed Bias")
+    plt.title(f"Training {method} - Bias")
+    plt.xlabel("Training Steps")
+    plt.show()
+    
     plt.figure(figsize=(12,5))
     plt.plot(smooth_bias, label="TD smoothed Bias")
     plt.title(f"Training {method} - Bias")
