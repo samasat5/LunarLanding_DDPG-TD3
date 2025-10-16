@@ -201,23 +201,20 @@ def train(
             td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
 
             # Critic update
-            loss_out = loss(td)
             optim_critic.zero_grad(set_to_none=True)
-            if method == "TD3": # TD3Loss
-                loss_q = loss_out["loss_qvalue"]
-            else:                # DDPGLoss
-                loss_q = loss_out["loss_value"]
             loss_q.backward()
             optim_critic.step()
-            updater.step() 
+            updater.step()
 
-            # Actor update (freeze critic params or detach inside loss)
+            # Recompute loss_out so actor loss uses the updated critic params
+            loss_out = loss(td)
+
+            # Actor update
             for p in critic.parameters(): p.requires_grad = False
             optim_actor.zero_grad(set_to_none=True)
             loss_pi = loss_out["loss_actor"]
             loss_pi.backward()
             optim_actor.step()
-            # updater.step()  
             for p in critic.parameters(): p.requires_grad = True
         
             # Record TD bias
