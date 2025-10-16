@@ -15,6 +15,14 @@ from torchrl._utils import logger as torchrl_logger
 from torchrl.envs.utils import check_env_specs
 
 
+"""
+Comparing:
+DDPG (single critic) with 
+TD3 (twin critics + clipped double-Q + target smoothing + delayed actor updates) 
+on LunarLanderContinuous-v3 environment.
+"""
+
+
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
 TOTAL_FRAMES = 50_000
