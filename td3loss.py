@@ -42,7 +42,7 @@ def soft_update(source, target, tau):
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 20_000
+TOTAL_FRAMES = 100_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -174,6 +174,7 @@ optim_critic = optim.Adam(critic.parameters(), lr=6e-4)
 
 
 def train (
+    method,
     loss,
     optim_critic,
     optim_actor,
@@ -212,7 +213,7 @@ def train (
             # Critic update
             loss_out = loss(td)
             optim_critic.zero_grad(set_to_none=True)
-            if loss == loss_td3: # TD3Loss
+            if method == "TD3": # TD3Loss
                 loss_q = loss(td)["loss_qvalue"]
             else:                # DDPGLoss
                 loss_q = loss(td)["loss_value"]
@@ -230,7 +231,7 @@ def train (
             for p in critic.parameters(): p.requires_grad = True
         
             # Record TD bias
-            if loss == loss_ddpg:
+            if method == "DDPG":
                 pred_q = loss_out["pred_value"]
                 target_q = loss_out["target_value"]
                 bias_batch = (pred_q - target_q).detach().mean().item()
@@ -246,10 +247,9 @@ def train (
             total_count += data.numel()
             total_episodes += data["next", "done"].sum()
             
-            # qvalues.append(loss(td)["loss_value"].item())  #TODO
-            qvalues.append(loss(td)["pred_value"].mean().item())  #TODO
-            # qvalues.append(loss(td)["pred_value"].mean().item())
-            # pdb.set_trace()
+            
+            qvalues.append(loss(td)["pred_value"].mean().item()) 
+
 
         success_steps.append(max_length)
         total_count += data.numel()
@@ -296,12 +296,12 @@ def train (
 
     plt.figure(figsize=(12,5))
     plt.plot(smooth_bias, label="TD smoothed Bias")
-    plt.title("Training DDPG - Bias")
+    plt.title(f"Training {method} - Bias")
     plt.xlabel("Training Steps")
     plt.show()
 
     plt.figure(figsize=(12,5))
     plt.plot(qvalues, label="Q Value Loss")
-    plt.title("Training DDPG - Q Values")
+    plt.title(f"Training {method} - Q Values")
     plt.xlabel("Training Steps")
     plt.show()
