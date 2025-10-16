@@ -178,6 +178,7 @@ total_episodes = 0
 t0 = time.time()
 success_steps = []
 qvalues = []
+biases = []
 
 num_batches = TOTAL_FRAMES // FRAMES_PER_BATCH
 pbar = tqdm(total=num_batches, desc="Training TD3", dynamic_ncols=True)
@@ -194,6 +195,7 @@ for i, data in enumerate(collector):  # Data from env rollouts
         td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
 
         # --- Critic 1 update
+        loss_out = loss(td)
         optim_critic_1.zero_grad(set_to_none=True)
         loss_q1 = loss(td)["loss_qvalue"]
         loss_q1.backward()
@@ -230,6 +232,16 @@ for i, data in enumerate(collector):  # Data from env rollouts
             soft_update(critic_net_1, critic_1_target, TAU)
             soft_update(critic_net_2, critic_2_target, TAU)
 
+
+
+        # Record TD bias
+        pred_q = loss_out["pred_value"]
+        target_q = loss_out["target_value"]
+        bias_batch = (pred_q - target_q).detach().mean().item()
+        
+        biases.append(bias_batch)
+        
+        
         # --- Stats
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
