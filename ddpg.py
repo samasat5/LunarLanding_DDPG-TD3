@@ -149,8 +149,8 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 )
 
 # 7. Optimizers
-optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
-optim_critic = optim.Adam(critic.parameters(), lr=1e-3)
+optim_actor = optim.Adam(policy.parameters(), lr=5e-4)
+optim_critic = optim.Adam(critic.parameters(), lr=5e-4)
 
 # 8. Training loop
 total_count = 0
@@ -246,9 +246,10 @@ torchrl_logger.info(
     f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
 )
 
-plt.figure(figsize=(10,5))
-plt.title("QValues per episode")
-plt.xlabel("Steps")
-plt.ylabel("QValues")
+plt.figure(figsize=(12,5))
 plt.plot(biases, label="TD Bias")
+plt.plot(qvalues, label="Q Value Loss")
+plt.legend()
+plt.title("Training Diagnostics")
+plt.xlabel("Training Steps")
 plt.show()
