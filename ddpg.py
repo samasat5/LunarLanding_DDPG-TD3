@@ -3,6 +3,7 @@ import time
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import torch
+import numpy as np
 from tqdm import tqdm
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
@@ -86,7 +87,7 @@ tanh_on_action = TDM(nn.Tanh(), in_keys=["action_raw"], out_keys=["action"])
 exploration_module = OUNoise(
     spec=env.action_spec,
     theta=0.15,
-    sigma=0.2,
+    sigma=0.05,
     dt=1e-2,
 )
 # mettre en place gaussian noise
@@ -120,8 +121,8 @@ loss = DDPGLoss(
     actor_network=policy, # deterministic 
     value_network=critic,
     loss_function="l2",
-    delay_actor=True,            
-    delay_value=True, 
+    delay_actor=True,
+    delay_value=True,
 )
 loss.make_value_estimator(gamma=GAMMA)
 updater = SoftUpdate(loss, tau=TAU)
@@ -146,15 +147,15 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 )
 
 # 7. Optimizers
-optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
-optim_critic = optim.Adam(critic.parameters(), lr=1e-3)
+optim_actor = optim.Adam(policy.parameters(), lr=5e-4)
+optim_critic = optim.Adam(critic.parameters(), lr=5e-4)
 
 # 8. Training loop
 total_count = 0
 total_episodes = 0
 t0 = time.time()
 success_steps, qvalues = [], []
-
+biases = []
 
 
 pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True)
@@ -192,13 +193,16 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         pred_q = loss_out["pred_value"]
         target_q = loss_out["target_value"]
         bias_batch = (pred_q - target_q).detach().mean().item()
+        
         biases.append(bias_batch)
 
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
         
-        qvalues.append(loss(td)["loss_value"].item())  #TODO
+        # qvalues.append(loss(td)["loss_value"].item())  #TODO
+        qvalues.append(loss(td)["pred_value"].mean().item())  #TODO
         # qvalues.append(loss(td)["pred_value"].mean().item())
+        # pdb.set_trace()
 
     success_steps.append(max_length)
     total_count += data.numel()
@@ -206,7 +210,8 @@ for i, data in enumerate(collector): # runs through the data collected from the 
     pbar.set_postfix({
         "Steps": total_count,
         "Episodes": total_episodes,
-        "Mean Q": f"{torch.tensor(qvalues[-50:]).mean().item():.2f}"
+        "Mean Q": f"{torch.tensor(qvalues[-50:]).mean().item():.2f}",
+        "Bias": f"{torch.tensor(biases[-50:]).mean().item():.2f}",
     })
     pbar.update(data.numel())
 
@@ -239,10 +244,13 @@ print(f"Training took {t1-t0:.2f}s")
 torchrl_logger.info(
     f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
 )
+window = 200  # adjust for smoothing strength
+smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
 
-plt.figure(figsize=(10,5))
-plt.title("QValues per episode")
-plt.xlabel("Steps")
-plt.ylabel("QValues")
-plt.plot(qvalues)
+plt.figure(figsize=(12,5))
+plt.plot(smooth_bias, label="TD smoothed Bias")
+# plt.plot(qvalues, label="Q Value Loss")
+plt.legend()
+plt.title("Training Diagnostics")
+plt.xlabel("Training Steps")
 plt.show()
