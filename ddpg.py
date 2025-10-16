@@ -136,14 +136,7 @@ loss = DDPGLoss(
     # delay_actor=True, # for more stability Default is False
     # delay_value=True, # for more stability Default is True
 )
-loss_td3 = TD3Loss(
-    actor_network=policy, # deterministic 
-    qvalue_network=critic,
-    loss_function="l2",
-    action_spec=env.action_spec,
-    # delay_actor=True, # for more stability Default is False
-    # delay_value=True, # for more stability Default is True
-)
+
 
 loss.make_value_estimator(gamma=GAMMA)
 updater = SoftUpdate(loss, tau=TAU)
@@ -221,7 +214,6 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         pred_q = loss_out["pred_value"]
         target_q = loss_out["target_value"]
         bias_batch = (pred_q - target_q).detach().mean().item()
-        
         biases.append(bias_batch)
 
         total_count += data.numel()
