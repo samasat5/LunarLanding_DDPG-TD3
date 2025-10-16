@@ -33,7 +33,7 @@ def soft_update(source, target, tau):
     
 # configurations
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 50_000
+TOTAL_FRAMES = 20_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
