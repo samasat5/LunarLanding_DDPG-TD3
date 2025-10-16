@@ -160,8 +160,8 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 )
 
 # 7. Optimizers
-optim_actor = optim.Adam(policy.parameters(), lr=6e-4)
-optim_critic = optim.Adam(critic.parameters(), lr=6e-4)
+optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
+optim_critic = optim.Adam(critic.parameters(), lr=1e-4)
 
 
 def train(
@@ -214,7 +214,7 @@ def train(
             # Actor update (freeze critic params or detach inside loss)
             for p in critic.parameters(): p.requires_grad = False
             optim_actor.zero_grad(set_to_none=True)
-            loss_pi = loss_out["loss_actor"]
+            loss_pi = loss(td)["loss_actor"]
             loss_pi.backward()
             optim_actor.step()
             # updater.step()  
@@ -298,8 +298,8 @@ def train(
 
 
 train(
-    method="DDPG",
-    loss=loss_ddpg,
+    method="TD3",
+    loss=loss_td3,
     optim_critic=optim_critic,
     optim_actor=optim_actor,
     replay_buffer=replay_buffer,
