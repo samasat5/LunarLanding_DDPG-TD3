@@ -33,7 +33,7 @@ on LunarLanderContinuous-v3 environment.
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 20_000
+TOTAL_FRAMES = 100_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -284,7 +284,7 @@ def train(
     window = 200  # adjust for smoothing strength
     smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
     plt.figure(figsize=(12,5))
-    plt.plot(biases, label="TD smoothed Bias")
+    plt.plot(biases, label="TD raw Bias")
     plt.title(f"Training {method} - Bias")
     plt.xlabel("Training Steps")
     plt.show()
@@ -295,9 +295,10 @@ def train(
     plt.xlabel("Training Steps")
     plt.show()
 
+    smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     plt.figure(figsize=(12,5))
-    plt.plot(qvalues, label="Q Value Loss")
-    plt.title(f"Training {method} - Q Values")
+    plt.plot(smooth_qvalue, label="Q Value Loss")
+    plt.title(f"Training {method} - smoothed Q Values")
     plt.xlabel("Training Steps")
     plt.show()
 
