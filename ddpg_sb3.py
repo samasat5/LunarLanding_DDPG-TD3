@@ -23,7 +23,7 @@ DEVICE = "auto"
 
 
 env = Monitor(gym.make("LunarLanderContinuous-v3"))
-eval_env = Monitor(gym.make("LunarLanderContinuous-v3"))
+eval_env = Monitor(gym.make("LunarLanderContinuous-v3")) # use a separate environment for training and eval to avoid training bias
 env.reset(seed=0)
 eval_env.reset(seed=0)
 
