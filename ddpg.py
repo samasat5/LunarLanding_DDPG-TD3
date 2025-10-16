@@ -172,6 +172,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
 
         # Critic update
         loss_out = loss(td)
+        pdb.set_trace()
         optim_critic.zero_grad(set_to_none=True)
         loss_q = loss_out["loss_value"]
         loss_q.backward()
