@@ -129,7 +129,7 @@ with torch.no_grad():
     _ = actor_target(td0.clone())     # init target actor
     _ = critic_target(td1.clone())    # init target critic
 
-loss_ddpg = DDPGLoss(
+loss = DDPGLoss(
     actor_network=policy, # deterministic 
     value_network=critic,
     loss_function="l2",
