@@ -33,7 +33,7 @@ def soft_update(source, target, tau):
     
 # configurations
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 100_000
+TOTAL_FRAMES = 50_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -169,8 +169,8 @@ replay_buffer = ReplayBuffer(
 )
 
 optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
-optim_critic_1 = optim.Adam(critic_net_1.parameters(), lr=1e-3)
-optim_critic_2 = optim.Adam(critic_net_2.parameters(), lr=1e-3)
+optim_critic_1 = optim.Adam(critic_net_1.parameters(), lr=5e-4)
+optim_critic_2 = optim.Adam(critic_net_2.parameters(), lr=5e-4)
 
 
 total_count = 0
