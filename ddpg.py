@@ -172,7 +172,6 @@ for i, data in enumerate(collector): # runs through the data collected from the 
 
         # Critic update
         loss_out = loss(td)
-        pdb.set_trace()
         optim_critic.zero_grad(set_to_none=True)
         loss_q = loss_out["loss_value"]
         loss_q.backward()
@@ -193,6 +192,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         pred_q = loss_out["pred_value"]
         target_q = loss_out["target_value"]
         bias_batch = (pred_q - target_q).detach().mean().item()
+        
         biases.append(bias_batch)
 
         total_count += data.numel()
@@ -200,6 +200,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         
         qvalues.append(loss(td)["loss_value"].item())  #TODO
         # qvalues.append(loss(td)["pred_value"].mean().item())
+        pdb.set_trace()
 
     success_steps.append(max_length)
     total_count += data.numel()
@@ -207,7 +208,8 @@ for i, data in enumerate(collector): # runs through the data collected from the 
     pbar.set_postfix({
         "Steps": total_count,
         "Episodes": total_episodes,
-        "Mean Q": f"{torch.tensor(qvalues[-50:]).mean().item():.2f}"
+        "Mean Q": f"{torch.tensor(qvalues[-50:]).mean().item():.2f}",
+        "Bias": f"{torch.tensor(biases[-50:]).mean().item():.2f}",
     })
     pbar.update(data.numel())
 
