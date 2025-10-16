@@ -263,7 +263,7 @@ def plot_qbias_td3(csv_path="./logs_td3/qbias/qbias_log.csv", save_path=None):
 
     # Plot the overestimation gap
     if "overestimation_gap_mean_abs" in data.dtype.names:
-        plt.plot(t, c("overestimation_gap_mean_abs"), ":", color="black",
+        plt.plot(t, data["overestimation_gap_mean_abs"], ":", color="black",
                  label="|Q1 - Q2| (mean abs gap)")
 
     plt.xlabel("Timesteps")
