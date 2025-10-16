@@ -130,7 +130,7 @@ with torch.no_grad():
 
 
 # Targets
-actor_target = deepcopy(actor_net) # no noise in target
+actor_target = deepcopy(actor_net)
 critic_target = deepcopy(critic_net)
 # critic_1_target = deepcopy(critic_net_1)
 # critic_2_target = deepcopy(critic_net_2)
@@ -138,10 +138,18 @@ critic_target = deepcopy(critic_net)
 
 
 
-qvalue_ensemble = QValueEnsembleModule(critic_net_1, critic_net_2)
+# qvalue_ensemble = QValueEnsembleModule(critic_net_1, critic_net_2)
+# loss = TD3Loss(
+#     actor_network=Seq(actor_net, tanh_on_action), 
+#     qvalue_network=qvalue_ensemble,
+#     action_spec=env.action_spec,
+#     loss_function="l2",
+#     delay_actor=True,
+#     delay_qvalue=True,
+# )
 loss = TD3Loss(
     actor_network=Seq(actor_net, tanh_on_action), 
-    qvalue_network=qvalue_ensemble,
+    qvalue_network=critic_net,
     action_spec=env.action_spec,
     loss_function="l2",
     delay_actor=True,
@@ -170,8 +178,9 @@ replay_buffer = ReplayBuffer(
 )
 
 optim_actor = optim.Adam(policy.parameters(), lr=1e-4)
-optim_critic_1 = optim.Adam(critic_net_1.parameters(), lr=5e-4)
-optim_critic_2 = optim.Adam(critic_net_2.parameters(), lr=5e-4)
+# optim_critic_1 = optim.Adam(critic_net_1.parameters(), lr=5e-4)
+# optim_critic_2 = optim.Adam(critic_net_2.parameters(), lr=5e-4)
+optim_critic = optim.Adam(critic_net.parameters(), lr=5e-4)
 
 
 total_count = 0
@@ -197,21 +206,25 @@ for i, data in enumerate(collector):  # Data from env rollouts
 
         # --- Critic 1 update
         loss_out = loss(td)
-        optim_critic_1.zero_grad(set_to_none=True)
+        # optim_critic_1.zero_grad(set_to_none=True)        
+        optim_critic.zero_grad(set_to_none=True)
         loss_q1 = loss(td)["loss_qvalue"]
         loss_q1.backward()
-        optim_critic_1.step()
+        # optim_critic_1.step()
+        optim_critic.step()
 
         # --- Critic 2 update
-        optim_critic_2.zero_grad(set_to_none=True)
-        loss_q2 = loss(td)["loss_qvalue"]
-        loss_q2.backward()
-        optim_critic_2.step()
+        # optim_critic_2.zero_grad(set_to_none=True)
+        # loss_q2 = loss(td)["loss_qvalue"]
+        # loss_q2.backward()
+        # optim_critic_2.step()
 
         # --- Actor update (delayed)
-        for p in critic_net_1.parameters():
-            p.requires_grad = False
-        for p in critic_net_2.parameters():
+        # for p in critic_net_1.parameters():
+        #     p.requires_grad = False
+        # for p in critic_net_2.parameters():
+        #     p.requires_grad = False
+        for p in critic_net.parameters():
             p.requires_grad = False
 
         optim_actor.zero_grad(set_to_none=True)
