@@ -171,6 +171,7 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
 
         # Critic update
+        loss_out = loss(td)
         optim_critic.zero_grad(set_to_none=True)
         loss_q = loss(td)["loss_value"]
         loss_q.backward()
@@ -186,7 +187,12 @@ for i, data in enumerate(collector): # runs through the data collected from the 
         updater.step()
         for p in critic.parameters(): p.requires_grad = True
 
-        # ou_noise.step(data.numel()) # make the noise decay over time
+
+        # Record TD bias
+        pred_q = loss_out["pred_value"]
+        target_q = loss_out["target_value"]
+        bias_batch = (pred_q - target_q).detach().mean().item()
+        biases.append(bias_batch)
 
         total_count += data.numel()
         total_episodes += data["next", "done"].sum()
