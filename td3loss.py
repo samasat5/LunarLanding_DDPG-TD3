@@ -132,8 +132,8 @@ loss_td3 = TD3Loss(
     qvalue_network=critic,
     loss_function="l2",
     action_spec=env.action_spec,
-    delay_actor=True, # for more stability Default is False
-    delay_value=True, # for more stability Default is True
+    delay_actor=True, # for more stability, Default is False
+    delay_qvalue=True, # for more stability, Default is True
 )
 
 
