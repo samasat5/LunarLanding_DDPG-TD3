@@ -380,6 +380,7 @@ def train(
     plt.show()
 
     plt.figure(figsize=(12,5))
+    plt.xtitle(f"Training {method} - Q Values")
     plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
     plt.title(f"Training {method} - smoothed Q Values")
