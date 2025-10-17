@@ -2,41 +2,80 @@ import torch
 import torch.nn as nn
 from torchrl.objectives import SoftUpdate
 from tensordict import TensorDict
+import numpy as np
 
+@torch.no_grad()
+def evaluate_mc_bias(loss, 
+                     eval_env,
+                     gamma=0.99,
+                     episodes=5,
+                     ):
 
-class QValueEnsembleModule(nn.Module):
-    """
-    Wrap two TensorDictModules (q1, q2) that each read ('observation','action')
-    and produce two separate outputs:
-      - 'state_action_value1' : [..., 1]
-      - 'state_action_value2' : [..., 1]
-    TD3Loss will take the min for target bootstrapping and compute both critic losses.
-    """
-    def __init__(self, q1: nn.Module, q2: nn.Module):
-        super().__init__()
-        self.q1 = q1
-        self.q2 = q2
-        # propagate in_keys so TorchRL can inspect them
-        self.in_keys = getattr(q1, "in_keys", getattr(q1, "_in_keys", None))
-        if getattr(self, "_in_keys", None) is None:
-            self._in_keys = self.in_keys
-        self.out_keys = ["state_action_value1", "state_action_value2"]
+    actor = loss.actor_network  
+    qnet = getattr(loss, "qvalue_network", None) or loss.value_network
 
-    def forward(self, tensordict: TensorDict):
-        td1 = self.q1(tensordict.clone())
-        td2 = self.q2(tensordict.clone())
+    all_bias = []
+    all_predq = []
+    all_returns = []
 
-        v1 = td1.get("state_action_value")
-        v2 = td2.get("state_action_value")
-        if v1 is None or v2 is None:
-            raise KeyError(
-                f"Critics must write 'state_action_value'. Got {list(td1.keys())} and {list(td2.keys())}."
-            )
+    for _ in range(episodes):
+        td = eval_env.reset()
+        ep_obs = []
+        ep_act = []
+        ep_rew = []
 
-        out = tensordict.clone()
-        out.set("state_action_value1", v1)  # [..., 1]
-        out.set("state_action_value2", v2)  # [..., 1]
-        return out
+        # rollout with deterministic policy (no OU noise)
+        while True:
+            # td has "observation"
+            td_in = td.select("observation")  
+            td_pi = actor(td_in.clone())  
+            ep_obs.append(td_in["observation"])
+            ep_act.append(td_pi["action"])
+
+            # Step env
+            td = eval_env.step(td_pi)
+            ep_rew.append(td["next", "reward"].item())
+
+            if td["next", "done"].item():
+                break
+
+        # Compute Monte-Carlo returns G_t backward
+        G = []
+        g = 0.0
+        for r in reversed(ep_rew):
+            g = r + gamma * g
+            G.append(g)
+        G = list(reversed(G))  # align with timesteps
+        obs_batch = torch.stack(ep_obs, 0)
+        act_batch = torch.stack(ep_act, 0)
+        td_batch = TensorDict(
+            {"observation": obs_batch, "action": act_batch},
+            batch_size=[obs_batch.shape[0]],
+        )
+        td_q = qnet(td_batch.clone())
+
+        # TorchRL q-nets usually write "state_action_value"
+        q_pred = td_q.get("state_action_value")
+        # If TD3 with two critics, q_pred may be a tuple/list; take min
+        if isinstance(q_pred, (tuple, list)):
+            q1, q2 = q_pred
+            q_pred = torch.minimum(q1, q2)
+
+        q_pred = q_pred.squeeze(-1)  # [T]
+        G_t = torch.tensor(G, dtype=q_pred.dtype)
+
+        bias = (q_pred - G_t).cpu().numpy()
+        all_bias.extend(bias.tolist())
+        all_predq.extend(q_pred.cpu().numpy().tolist())
+        all_returns.extend(G_t.cpu().numpy().tolist())
+
+    mean_bias = float(np.mean(all_bias))
+    details = {
+        "bias_per_step": np.array(all_bias),
+        "q_pred_per_step": np.array(all_predq),
+        "return_per_step": np.array(all_returns),
+    }
+    return mean_bias, details
 
 
 

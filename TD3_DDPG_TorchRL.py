@@ -17,7 +17,7 @@ import torch
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
 from torchrl.envs.utils import check_env_specs
-from utils2 import MultiCriticSoftUpdate, soft_update, QValueEnsembleModule
+from utils2 import MultiCriticSoftUpdate, soft_update, evaluate_mc_bias
 from tqdm import tqdm
 
 
@@ -293,10 +293,6 @@ def train(
             
             
             qvalues.append(loss_out["pred_value"].mean().item()) 
-            # qvalue1.append(loss_out["pred_value"][0].mean().item())  
-            # qvalue2.append(loss_out["pred_value"][1].mean().item())
-                    # === Periodic Monte Carlo bias evaluation ===
-
             
 
         rewards.append((i,td["next", "reward"].mean().item(),))
@@ -314,10 +310,28 @@ def train(
         pbar.update(data.numel())
 
         if total_count % LOG_EVERY == 0:
-            torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
-            # torchrl_logger.info(f"Steps: {total_count}, Episodes: {total_episodes}, Max Ep Len: {max_length}, ReplayBuffer: {len(replay_buffer)}, Q: {torch.tensor(qvalues[-50:]).item():.3f} [END]")
-    
-    
+                torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
+               
+        if (total_count // eval_every) != ((total_count - data.numel()) // eval_every):
+            eval_env.transform[2].load_state_dict(env.transform[2].state_dict())
+
+            mc_mean_bias, mc_details = evaluate_mc_bias(
+                loss=loss,
+                eval_env=eval_env,
+                gamma=GAMMA,
+                episodes=EVAL_EPISODES,
+                device=DEVICE,
+            )
+            mc_bias_means.append(mc_mean_bias)
+            mc_bias_steps.append(total_count)
+
+            torchrl_logger.info(
+                f"[EVAL] steps={total_count} MC-mean-bias={mc_mean_bias:.4f} "
+                f"(avg Q={mc_details['q_pred_per_step'].mean():.3f}, "
+                f"avg return={mc_details['return_per_step'].mean():.3f})"
+            )
+
+        
 
 
     pbar.close()
