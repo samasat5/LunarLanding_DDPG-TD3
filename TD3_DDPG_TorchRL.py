@@ -45,7 +45,7 @@ GAMMA = 0.99
 EVAL_EVERY = 10_000   # frames
 EVAL_EPISODES = 10
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
-UPDATE_ACTOR_EVERY = 
+UPDATE_ACTOR_EVERY = 2
 # Seed the Python and RL environments to replicate similar results across training sessions. 
 
 # 1. Environment
@@ -237,34 +237,33 @@ def train(
             optim_critic.zero_grad(set_to_none=True)
             loss_q.backward()
             optim_critic.step()
-            updater.step()
 
             # Recompute loss_out so actor loss uses the updated critic params
             loss_out = loss(td)
             
 
             # Actor update
-            for p in critic.parameters(): p.requires_grad = False
-            optim_actor.zero_grad(set_to_none=True)
-            loss_pi = loss_out["loss_actor"]
-            loss_pi.backward()
-            optim_actor.step()
-            for p in critic.parameters(): p.requires_grad = True
-            
-                # === Delayed actor update ===
-            if update_step % UPDATE_ACTOR_EVERY == 0:
-                for p in critic.parameters():
-                    p.requires_grad = False
+            if method == "DDPG":
+                for p in critic.parameters(): p.requires_grad = False
                 optim_actor.zero_grad(set_to_none=True)
                 loss_pi = loss_out["loss_actor"]
                 loss_pi.backward()
-                torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)
                 optim_actor.step()
-                for p in critic.parameters():
-                    p.requires_grad = True
-
-                # === Soft update targets only when actor is updated ===
                 updater.step()
+                for p in critic.parameters(): p.requires_grad = True
+            
+            if method == "TD3":
+                if update_step % UPDATE_ACTOR_EVERY == 0:
+                    for p in critic.parameters(): p.requires_grad = False
+                    optim_actor.zero_grad(set_to_none=True)
+                    loss_pi = loss_out["loss_actor"]
+                    loss_pi.backward()
+                    torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)
+                    optim_actor.step()
+                    for p in critic.parameters(): p.requires_grad = True
+
+                    # === Soft update targets only when actor is updated ===
+                    updater.step()
             
             
             
