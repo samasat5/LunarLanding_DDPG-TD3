@@ -116,9 +116,6 @@ critic_mlp = MLP(
     activate_last_layer=False)
 critic = TDM(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
 
-# # Target Networks
-# actor_target = deepcopy(actor) 
-# critic_target = deepcopy(critic)
 
 # 4.  loss module
 # --- 4) Warm-up forward to initialize lazy modules BEFORE loss/opt
