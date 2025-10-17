@@ -312,7 +312,7 @@ def train(
         # if total_count % LOG_EVERY == 0:
         #         torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
         
-        pdb.set_trace()
+        
         # if (total_count // eval_every) != ((total_count - data.numel()) // eval_every):
         if total_count % eval_every < data.numel():
 
