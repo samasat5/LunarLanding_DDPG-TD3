@@ -46,6 +46,7 @@ action_noise = NormalActionNoise(
 )
 
 logger = configure("./logs_td3/", ["stdout", "csv", "tensorboard"])
+qbias_cb = QBiasLoggerTD3(gamma=GAMMA, sample_n=50_000, save_csv="./logs_td3/stats/stats_log.csv")
 eval_callback = EvalCallback( # The callback runs episodes on eval_env every EVAL_EVERY steps and saves the best model.
     eval_env,
     best_model_save_path="./td3_best",
@@ -54,10 +55,8 @@ eval_callback = EvalCallback( # The callback runs episodes on eval_env every EVA
     n_eval_episodes=EVAL_EPISODES,
     deterministic=True,
     render=False,
+    callback_after_eval=qbias_cb,
 )
-qbias_cb = QBiasLoggerTD3(gamma=GAMMA, sample_n=50_000, save_csv="./logs_td3/stats/stats_log.csv")
-# trigger every EVAL_EVERY timesteps (works with n_envs>1 too, because it uses num_timesteps)
-every_qbias = EveryNTimesteps(n_steps=EVAL_EVERY, callback=qbias_cb)
 
 model = TD3(
     policy="MlpPolicy", 
@@ -81,7 +80,7 @@ model.set_logger(logger)
 model.learn(
     total_timesteps=TOTAL_FRAMES, 
     log_interval=LOG_EVERY, 
-    callback=[eval_callback, every_qbias], 
+    callback=eval_callback, 
     progress_bar=True,
 )# train the agent, collects rollouts and optimizes the actor and critic networks
 model.save("td3_lunarlander")
