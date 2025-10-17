@@ -193,10 +193,10 @@ def train(
     eval_rewards = []       
     eval_steps = []
     update_step = 0
-    optim_actor = Adam(loss.actor_network_params.parameters(),  lr=3e-4)
+    optim_actor = Adam(loss.actor_network_params.values(True, True),  lr=3e-4)
     
     if method == "TD3":
-        optim_critic = Adam(loss.qvalue_network_params.parameters(), lr=3e-4)
+        optim_critic = Adam(loss.qvalue_network_params.values(True, True), lr=3e-4)
     else:
         optim_critic = Adam(loss.value_network.parameters(), lr=3e-4)
         
