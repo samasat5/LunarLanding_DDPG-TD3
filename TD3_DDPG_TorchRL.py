@@ -320,7 +320,7 @@ def train(
 
 
     pbar.close()
-    t1 = time.time()
+    t1 = time.time()    
     print(f"Training took {t1-t0:.2f}s")
     torchrl_logger.info(
         f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
@@ -362,39 +362,87 @@ train(
     opt_steps=OPTIM_STEPS,
     batch_size=REPLAY_BUFFER_SAMPLE,
 )
-# # DDPG training
-# ddpg_steps, ddpg_rewards = train(
-#     method="DDPG",
-#     loss=loss_ddpg,
-#     optim_critic=optim_critic,
-#     optim_actor=optim_actor,
-#     replay_buffer=replay_buffer,
-#     collector=collector,
-#     total_frames=TOTAL_FRAMES,
-#     eval_env=eval_env,
-#     eval_episodes=EVAL_EPISODES,
-#     log_every=LOG_EVERY,
-#     eval_every=EVAL_EVERY,
-#     opt_steps=OPTIM_STEPS,
-#     batch_size=REPLAY_BUFFER_SAMPLE,
-# )
+rewards = []
+rewards_eval = []
 
-# # TD3 training
-# td3_steps, td3_rewards = train(
-#     method="TD3",
-#     loss=loss_td3,
-#     optim_critic=optim_critic,
-#     optim_actor=optim_actor,
-#     replay_buffer=replay_buffer,
-#     collector=collector,
-#     total_frames=TOTAL_FRAMES,
-#     eval_env=eval_env,
-#     eval_episodes=EVAL_EPISODES,
-#     log_every=LOG_EVERY,
-#     eval_every=EVAL_EVERY,
-#     opt_steps=OPTIM_STEPS,
-#     batch_size=REPLAY_BUFFER_SAMPLE,
-# )
+# Main loop
 
+collected_frames = 0
+pbar = tqdm.tqdm(total=total_frames)
+r0 = None
+for i, tensordict in enumerate(collector):
 
+    # update weights of the inference policy
+    collector.update_policy_weights_()
 
+    if r0 is None:
+        r0 = tensordict["next", "reward"].mean().item()
+    pbar.update(tensordict.numel())
+
+    # extend the replay buffer with the new data
+    current_frames = tensordict.numel()
+    collected_frames += current_frames
+    replay_buffer.extend(tensordict.cpu())
+
+    # optimization steps
+    if collected_frames >= init_random_frames:
+        for _ in range(update_to_data):
+            # sample from replay buffer
+            sampled_tensordict = replay_buffer.sample().to(device)
+
+            # Compute loss
+            loss_dict = loss_module(sampled_tensordict)
+
+            # optimize
+            loss_dict["loss_actor"].backward()
+            gn1 = torch.nn.utils.clip_grad_norm_(
+                loss_module.actor_network_params.values(True, True), 10.0
+            )
+            optimizer_actor.step()
+            optimizer_actor.zero_grad()
+
+            loss_dict["loss_value"].backward()
+            gn2 = torch.nn.utils.clip_grad_norm_(
+                loss_module.value_network_params.values(True, True), 10.0
+            )
+            optimizer_value.step()
+            optimizer_value.zero_grad()
+
+            gn = (gn1**2 + gn2**2) ** 0.5
+
+            # update priority
+            if prb:
+                replay_buffer.update_tensordict_priority(sampled_tensordict)
+            # update target network
+            target_net_updater.step()
+
+    rewards.append(
+        (
+            i,
+            tensordict["next", "reward"].mean().item(),
+        )
+    )
+    td_record = recorder(None)
+    if td_record is not None:
+        rewards_eval.append((i, td_record["r_evaluation"].item()))
+    if len(rewards_eval) and collected_frames >= init_random_frames:
+        target_value = loss_dict["target_value"].item()
+        loss_value = loss_dict["loss_value"].item()
+        loss_actor = loss_dict["loss_actor"].item()
+        rn = sampled_tensordict["next", "reward"].mean().item()
+        rs = sampled_tensordict["next", "reward"].std().item()
+        pbar.set_description(
+            f"reward: {rewards[-1][1]: 4.2f} (r0 = {r0: 4.2f}), "
+            f"reward eval: reward: {rewards_eval[-1][1]: 4.2f}, "
+            f"reward normalized={rn :4.2f}/{rs :4.2f}, "
+            f"grad norm={gn: 4.2f}, "
+            f"loss_value={loss_value: 4.2f}, "
+            f"loss_actor={loss_actor: 4.2f}, "
+            f"target value: {target_value: 4.2f}"
+        )
+
+    # update the exploration strategy
+    actor_model_explore[1].step(current_frames)
+
+collector.shutdown()
+del collector
