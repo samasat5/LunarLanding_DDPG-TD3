@@ -14,19 +14,9 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.vec_env import VecNormalize
 from utils_sb3 import QBiasLoggerDDPG, plot_stats_ddpg
 
-# TO ADD : ????????????????????????????????????????????????
-# Optional: critic_target_std = q_next.std().item() — catches target explosion
-# Optional: gradient norms every K steps ???
-# eval_freq means: “Run an evaluation every eval_freq calls to env.step().”
-# But here’s the subtlety:
-# Each env.step() processes 8 frames in parallel, one from each environment.
-# So after 1 call to env.step(), you’ve already advanced 8 timesteps total in the real world.
-# add load and inference
-# os.remove(save_csv) if exists
-
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
-TOTAL_FRAMES = 1000_000 # 1_000_000
+TOTAL_FRAMES = 1_000_000 # 1_000_000
 FRAMES_PER_BATCH = 100 # train freq
 OPTIM_STEPS =  10 # gradient steps
 BUFFER_LEN = 1_000_000
@@ -61,6 +51,7 @@ action_noise = NormalActionNoise(
 # )
 
 logger = configure("./logs_ddpg/", ["stdout", "csv", "tensorboard"])
+qbias_cb = QBiasLoggerDDPG(gamma=GAMMA, sample_n=10_000, save_csv="./logs_ddpg/stats/stats_log.csv")
 eval_callback = EvalCallback( # The callback runs episodes on eval_env every EVAL_EVERY steps and saves the best model.
     eval_env,
     best_model_save_path="./ddpg_best",
@@ -70,7 +61,6 @@ eval_callback = EvalCallback( # The callback runs episodes on eval_env every EVA
     deterministic=True,
     render=False,
 )
-qbias_cb = QBiasLoggerDDPG(gamma=GAMMA, sample_n=50_000, save_csv="./logs_ddpg/stats/stats_log.csv")
 # trigger every EVAL_EVERY timesteps (works with n_envs>1 too, because it uses num_timesteps)
 every_qbias = EveryNTimesteps(n_steps=EVAL_EVERY, callback=qbias_cb)
 
