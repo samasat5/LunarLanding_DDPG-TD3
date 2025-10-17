@@ -127,15 +127,28 @@ loss_ddpg = DDPGLoss(
     # delay_actor=True, # for more stability Default is False
     # delay_value=True, # for more stability Default is True
 )
+# --- two truly independent critics
+critic1 = TDM(MLP(1, [MLP_SIZE, MLP_SIZE], nn.ReLU, False),
+              in_keys=["observation","action"], out_keys=["state_action_value"])
+critic2 = TDM(MLP(1, [MLP_SIZE, MLP_SIZE], nn.ReLU, False),
+              in_keys=["observation","action"], out_keys=["state_action_value"])
+
 loss_td3 = TD3Loss(
-    actor_network=policy, # deterministic 
-    qvalue_network=critic,
-    loss_function="l2",
+    actor_network=policy,
+    qvalue_network=[critic1, critic2],  # explicit twins
+    num_qvalue_nets=2,
     action_spec=env.action_spec,
-    num_qvalue_nets=2 ,
-    delay_actor=True, # for more stability, Default is False
-    delay_qvalue=True, # for more stability, Default is True
+    loss_function="l2",
+    delay_actor=True,
+    delay_qvalue=True,
 )
+
+optim_critic = optim.Adam(
+    list(critic1.parameters()) + list(critic2.parameters()),
+    lr=1e-3,  # or 3e-4
+    weight_decay=0.0
+)
+
 
 
 
@@ -162,7 +175,7 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 
 # 7. Optimizers
 optim_actor = optim.Adam(policy.parameters(), lr=3e-4, weight_decay=0.0)
-optim_critic = optim.Adam(critic.parameters(), lr=3e-3, weight_decay=0)
+# optim_critic = optim.Adam(critic.parameters(), lr=3e-3, weight_decay=0)
 
 
 def train(
@@ -357,8 +370,8 @@ def train(
 
 
 train(
-    method="DDPG",
-    loss=loss_ddpg,
+    method="TD3",
+    loss=loss_td3,
     optim_critic=optim_critic,
     optim_actor=optim_actor,
     replay_buffer=replay_buffer,
