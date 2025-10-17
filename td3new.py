@@ -120,6 +120,7 @@ with torch.no_grad():
     td1 = td0.clone()
     td1["action"] = env.action_spec.rand(td1.batch_size)
     _ = critic1(td1)            # init critic
+    _ = critic2(td1)            # init critic
     # _ = actor_target(td0.clone())     # init target actor
     # _ = critic_target(td1.clone())    # init target critic
 
