@@ -33,7 +33,7 @@ on LunarLanderContinuous-v3 environment.
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 200_000
+TOTAL_FRAMES = 20_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -194,7 +194,8 @@ def train(
     eval_steps = []
     update_step = 0
 
-
+    optim_actor = Adam(loss.actor_network_params.parameters(),  lr=3e-4)
+    optim_critic = Adam(loss.qvalue_network_params.parameters(), lr=3e-4)
     pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True) if method=="DDPG" else tqdm(total=TOTAL_FRAMES, desc="Training TD3", dynamic_ncols=True)
     for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
         replay_buffer.extend(data) # add data to the replay buffer
