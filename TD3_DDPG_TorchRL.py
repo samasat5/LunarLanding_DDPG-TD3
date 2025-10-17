@@ -332,6 +332,7 @@ def train(
                 mean_reward = sum(rewards) / EVAL_EPISODES
                 eval_rewards.append(mean_reward)
                 eval_steps.append(total_count)
+                pdb.set_trace()
                 torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
             policy.train()
 
