@@ -187,6 +187,7 @@ def train(
     batch_size=REPLAY_BUFFER_SAMPLE,
 ):
     
+    
     updater = SoftUpdate(loss, tau=TAU)
     loss.make_value_estimator(gamma=GAMMA)
     total_count = 0
