@@ -351,18 +351,7 @@ def train(
     plt.xlabel("Training Steps")
     plt.show()
     
-    accumulated_rewards = np.cumsum(eval_rewards)
 
-    plt.figure(figsize=(10,5))
-    plt.plot(eval_steps, eval_rewards, label=f'Accumulated Evaluation Rewards - {method}', color='tab:green')
-    plt.xlabel('Training Steps')
-    plt.ylabel('Accumulated Reward')
-    plt.title(f'{method} - Accumulated Evaluation Reward')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-    
-    return eval_steps, eval_rewards
 
 
 
