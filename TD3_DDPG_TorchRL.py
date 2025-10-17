@@ -233,7 +233,7 @@ def train(
             optim_actor.zero_grad(set_to_none=True)
             loss_pi = loss_out["loss_actor"]        # from the same forward pass
             loss_pi.backward()
-            torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)  # or policy.parameters() / policy param accessor
+            torch.nn.utils.clip_grad_norm_(loss.actor_network_params.values(True, True), 1.0)  # or policy.parameters() / policy param accessor
             optim_actor.step()
             optim_actor.zero_grad(set_to_none=True)
             for p in critic.parameters():
@@ -242,7 +242,8 @@ def train(
             optim_critic.zero_grad(set_to_none=True)
             loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
             loss_q.backward()
-            torch.nn.utils.clip_grad_norm_(critic.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(loss.value_network_params.values(True, True), 1.0) if method == "DDPG" else torch.nn.utils.clip_grad_norm_(loss.qvalue_network_params.values(True, True), 1.0)
+             # or critic.parameters() / critic param accessor
             optim_critic.step()
             # === Update targets after both updates ===
             updater.step()
