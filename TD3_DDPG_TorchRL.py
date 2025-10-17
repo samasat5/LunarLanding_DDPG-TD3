@@ -325,9 +325,9 @@ def train(
             
             
             qvalues.append(loss_out["pred_value"].mean().item()) 
-            qvalue1.append(loss_out["pred_value"][0].mean().item())  
-            qvalue2.append(loss_out["pred_value"][1].mean().item())
-            pdb.set_trace()
+            # qvalue1.append(loss_out["pred_value"][0].mean().item())  
+            # qvalue2.append(loss_out["pred_value"][1].mean().item())
+          
 
         rewards.append((i,td["next", "reward"].mean().item(),))
     
