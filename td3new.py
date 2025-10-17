@@ -98,16 +98,19 @@ rollout_policy = Seq(actor, tanh_on_action, exploration_module)      # stochasti
 
 
 # 3. Critic (action value function)
-critic_mlp = MLP(
+critic_mlp1 = MLP(
     out_features=1, 
     num_cells=[MLP_SIZE, MLP_SIZE],
     activation_class=nn.ReLU,
     activate_last_layer=False)
-critic = TDM(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
+critic1 = TDM(critic_mlp1, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
 
-# # Target Networks
-# actor_target = deepcopy(actor) 
-# critic_target = deepcopy(critic)
+critic_mlp2 = MLP(
+    out_features=1, 
+    num_cells=[MLP_SIZE, MLP_SIZE],
+    activation_class=nn.ReLU,
+    activate_last_layer=False)
+critic2 = TDM(critic_mlp2, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
 
 # 4.  loss module
 # --- 4) Warm-up forward to initialize lazy modules BEFORE loss/opt
@@ -116,23 +119,16 @@ with torch.no_grad():
     _ = policy(td0.clone())    # init actor
     td1 = td0.clone()
     td1["action"] = env.action_spec.rand(td1.batch_size)
-    _ = critic(td1)            # init critic
+    _ = critic1(td1)            # init critic
     # _ = actor_target(td0.clone())     # init target actor
     # _ = critic_target(td1.clone())    # init target critic
 
-loss_ddpg = DDPGLoss(
-    actor_network=policy, # deterministic 
-    value_network=critic,
-    loss_function="l2",
-    # delay_actor=True, # for more stability Default is False
-    # delay_value=True, # for more stability Default is True
-)
+twin_q = QValueEnsembleModule(critic1, critic2)
 loss_td3 = TD3Loss(
     actor_network=policy, # deterministic 
-    qvalue_network=critic,
+    qvalue_network=twin_q,
     loss_function="l2",
     action_spec=env.action_spec,
-    num_qvalue_nets=2 ,
     delay_actor=True, # for more stability, Default is False
     delay_qvalue=True, # for more stability, Default is True
 )
@@ -162,7 +158,7 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 
 # 7. Optimizers
 optim_actor = optim.Adam(policy.parameters(), lr=3e-4, weight_decay=0.0)
-optim_critic = optim.Adam(critic.parameters(), lr=3e-3, weight_decay=0)
+optim_critic = Adam(list(critic1.parameters()) + list(critic2.parameters()), lr=3e-3)
 
 
 def train(
