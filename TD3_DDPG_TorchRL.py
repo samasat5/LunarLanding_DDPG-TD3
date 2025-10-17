@@ -361,3 +361,36 @@ train(
     opt_steps=OPTIM_STEPS,
     batch_size=REPLAY_BUFFER_SAMPLE,
 )
+# DDPG training
+ddpg_steps, ddpg_rewards = train(
+    method="DDPG",
+    loss=loss_ddpg,
+    optim_critic=optim_critic,
+    optim_actor=optim_actor,
+    replay_buffer=replay_buffer,
+    collector=collector,
+    total_frames=TOTAL_FRAMES,
+    eval_env=eval_env,
+    eval_episodes=EVAL_EPISODES,
+    log_every=LOG_EVERY,
+    eval_every=EVAL_EVERY,
+    opt_steps=OPTIM_STEPS,
+    batch_size=REPLAY_BUFFER_SAMPLE,
+)
+
+# TD3 training
+td3_steps, td3_rewards = train(
+    method="TD3",
+    loss=loss_td3,
+    optim_critic=optim_critic,
+    optim_actor=optim_actor,
+    replay_buffer=replay_buffer,
+    collector=collector,
+    total_frames=TOTAL_FRAMES,
+    eval_env=eval_env,
+    eval_episodes=EVAL_EPISODES,
+    log_every=LOG_EVERY,
+    eval_every=EVAL_EVERY,
+    opt_steps=OPTIM_STEPS,
+    batch_size=REPLAY_BUFFER_SAMPLE,
+)
