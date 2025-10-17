@@ -273,7 +273,6 @@ def train(
                     updater.step()
             
         
-        
             # Record TD bias
             if method == "DDPG":
                 pred_q = loss_out["pred_value"]
