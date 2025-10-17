@@ -6,12 +6,11 @@ from collections import deque
 import pandas as pd
 
 class QBiasLoggerDDPG(BaseCallback):
-    def __init__(self, gamma: float, sample_n: int = 50_000, reward_window: int = 200, save_csv: str = "./logs_ddpg/stats/stats_log.csv", reward_csv="./logs_ddpg/stats/reward_log.csv"):
+    def __init__(self, gamma: float, sample_n: int = 50_000, reward_window: int = 200, save_csv: str = "./logs_ddpg/stats/stats_log.csv"):
         super().__init__()
         self.gamma = gamma
         self.sample_n = sample_n
         self.save_csv = save_csv
-        self.reward_csv = reward_csv
         os.makedirs(os.path.dirname(save_csv), exist_ok=True)
         if not os.path.exists(save_csv):
             with open(save_csv, "w", newline="") as f:
@@ -23,15 +22,6 @@ class QBiasLoggerDDPG(BaseCallback):
                     "target_mean", "target_std",
                     "critic_loss",
                 ])
-        os.makedirs(os.path.dirname(reward_csv), exist_ok=True)
-        # if not os.path.exists(reward_csv):
-        #     with open(reward_csv, "w", newline="") as f:
-        #         csv.writer(f).writerow([
-        #             "timesteps",
-        #             "eval_mean_reward",
-        #             "eval_std_reward",
-        #             "eval_mean_ep_length"
-        #         ])
 
 
     def _on_step(self) -> bool:
@@ -90,7 +80,7 @@ class QBiasLoggerDDPG(BaseCallback):
         self.logger.record("stats/bias_mean", mean_bias), self.logger.record("stats/bias_std", std_bias)
         self.logger.record("stats/bias_abs_mean", mean_abs), self.logger.record("stats/bias_abs_std", std_abs)
         self.logger.record("stats/q_values_mean", q_values_mean), self.logger.record("stats/q_values_std", q_values_std)
-        self.logger.record("stats/target_mean", q_values_mean), self.logger.record("stats/target_std", q_values_std)
+        self.logger.record("stats/target_mean", target_mean), self.logger.record("stats/target_std", target_std)
         self.logger.record("stats/critic_loss", critic_loss)
 
         with open(self.save_csv, "a", newline="") as f:
@@ -130,7 +120,7 @@ def plot_stats_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv", reward_csv="./lo
     plt.plot(timesteps, mean_bias, label="mean(Q - target)")
     plt.fill_between(timesteps, mean_bias - std_bias, mean_bias + std_bias, alpha=0.2, label="±1 std")
     plt.plot(timesteps, mean_abs, label="mean |Q - target|")
-    plt.fill_between(timesteps, mean_abs - std_target, mean_abs + std_abs, alpha=0.2, label="±1 std")
+    plt.fill_between(timesteps, mean_abs - std_abs, mean_abs + std_abs, alpha=0.2, label="±1 std")
     plt.xlabel("Timesteps")
     plt.ylabel("Q-bias value")
     plt.title("DDPG Q-bias vs Timesteps")
@@ -218,32 +208,23 @@ class QBiasLoggerTD3(BaseCallback):
       - overestimation_gap = mean(|q1 - q2|)
     Also appends a CSV for easy plotting.
     """
-    def __init__(self, gamma: float, sample_n: int = 50_000, save_csv: str = "./logs_td3/stats/stats_log.csv", reward_csv: str = "./logs_td3/stats/reward_log.csv"):
+    def __init__(self, gamma: float, sample_n: int = 50_000, save_csv: str = "./logs_td3/stats/stats_log.csv"):
         super().__init__()
         self.gamma = gamma
         self.sample_n = sample_n
         self.save_csv = save_csv
-        self.reward_csv = reward_csv
         os.makedirs(os.path.dirname(save_csv), exist_ok=True)
         if not os.path.exists(save_csv):
             with open(save_csv, "w", newline="") as f:
                 csv.writer(f).writerow([
                     "timesteps",
-                    "q1_mean","q1_mean_abs","q1_std",
-                    "q2_mean","q2_mean_abs","q2_std",
-                    "min_mean","min_mean_abs","min_std",
-                    "overestimation_gap_mean_abs",
-                    "loss1", "loss2",
-                    "critic_loss",
-                    "mean_q_1", "mean_q_2"
-                ])
-        os.makedirs(os.path.dirname(reward_csv), exist_ok=True)
-        if not os.path.exists(reward_csv):
-            with open(reward_csv, "w", newline="") as f:
-                csv.writer(f).writerow([
-                    "timesteps",
-                    "eval_mean_reward",
-                    "eval_mean_ep_length"
+                    "q1_mean", "q1_std", "q1_mean_abs", "q1_std_abs",
+                    "q2_mean", "q2_std", "q2_mean_abs", "q2_std_abs",
+                    "min_mean", "min_std", "min_mean_abs", "min_std_abs",
+                    "overestimation_gap_mean_abs", "overestimation_gap_std_abs",
+                    "loss1", "loss2", "critic_loss",
+                    "mean_q_1", "std_q_1",
+                    "mean_q_2", "std_q_2"
                 ])
 
 
@@ -314,65 +295,57 @@ class QBiasLoggerTD3(BaseCallback):
             # overestimation gap between critics 
             over_gap = torch.abs(q1 - q2).cpu().numpy()
 
-        q1_mean, q1_abs, q1_std = float(np.mean(bias1)), float(np.mean(np.abs(bias1))), float(np.std(bias1))
-        q2_mean, q2_abs, q2_std = float(np.mean(bias2)), float(np.mean(np.abs(bias2))), float(np.std(bias2))
-        mn_mean, mn_abs, mn_std = float(np.mean(bias_min)), float(np.mean(np.abs(bias_min))), float(np.std(bias_min))
-        gap_abs_mean = float(np.mean(over_gap))
+
+        q1_mean, q1_std = float(np.mean(bias1)), float(np.std(bias1))
+        q1_mean_abs, q1_std_abs = float(np.mean(np.abs(bias1))), float(np.std(np.abs(bias1)))
+
+        q2_mean, q2_std = float(np.mean(bias2)), float(np.std(bias2))
+        q2_mean_abs, q2_std_abs = float(np.mean(np.abs(bias2))), float(np.std(np.abs(bias2))) 
+
+        mn_mean, mn_std= float(np.mean(bias_min)), float(np.std(bias_min))
+        mn_abs_mean, mn_abs_std = float(np.mean(np.abs(bias_min))), float(np.std(np.abs(bias_min)))
+
+        gap_abs_mean, gap_abs_std = float(np.mean(over_gap)), float(np.std(over_gap))
+
         loss1 = float(F.mse_loss(q1, target).item())
         loss2 = float(F.mse_loss(q2, target).item())
         critic_loss = 0.5 * (loss1 + loss2)
-        mean_q_1 = float(torch.mean(q1).item())
-        mean_q_2 = float(torch.mean(q2).item())
+
+        mean_q_1, std_q_1 = float(torch.mean(q1).item()), float(torch.std(q1,unbiased=False).item())
+        mean_q_2, std_q_2 = float(torch.mean(q2).item()), float(torch.std(q2,unbiased=False).item())
 
         # log to SB3 (TensorBoard/CSV if configured)
-        self.logger.record("stats/q1_mean", q1_mean)
-        self.logger.record("stats/q1_mean_abs", q1_abs)
-        self.logger.record("stats/q1_std", q1_std)
+        self.logger.record("stats/q1_mean", q1_mean), self.logger.record("stats/q1_std", q1_std)
+        self.logger.record("stats/q1_mean_abs", q1_mean_abs), self.logger.record("stats/q1_std_abs", q1_std_abs)
+        
+        self.logger.record("stats/q2_mean", q2_mean), self.logger.record("stats/q2_std", q2_std)
+        self.logger.record("stats/q2_mean_abs", q2_mean_abs), self.logger.record("stats/q2_std_abs", q2_std_abs)
 
-        self.logger.record("stats/q2_mean", q2_mean)
-        self.logger.record("stats/q2_mean_abs", q2_abs)
-        self.logger.record("stats/q2_std", q2_std)
-
-        self.logger.record("stats/min_mean", mn_mean)
-        self.logger.record("stats/min_mean_abs", mn_abs)
-        self.logger.record("stats/min_std", mn_std)
-
-        self.logger.record("stats/overestimation_gap_abs_mean", gap_abs_mean)
-        self.logger.record("stats/loss1", loss1)
-        self.logger.record("stats/loss2", loss2)
-        self.logger.record("stats/critic_loss", critic_loss)
-        self.logger.record("stats/mean_q_1", mean_q_1)
-        self.logger.record("stats/mean_q_2", mean_q_2)
+        self.logger.record("stats/min_mean", mn_mean), self.logger.record("stats/min_std", mn_std)
+        self.logger.record("stats/min_mean_abs", mn_abs_mean), self.logger.record("stats/min_std_abs", mn_abs_std)
+        
+        self.logger.record("stats/overestimation_gap_abs_mean", gap_abs_mean), self.logger.record("stats/overestimation_gap_abs_std", gap_abs_std)
+        self.logger.record("stats/loss1", loss1), self.logger.record("stats/loss2", loss2), self.logger.record("stats/critic_loss", critic_loss)
+        self.logger.record("stats/mean_q_1", mean_q_1), self.logger.record("stats/std_q_1", std_q_1)
+        self.logger.record("stats/mean_q_2", mean_q_2), self.logger.record("stats/std_q_2", std_q_2)
 
         # append to our CSV
         with open(self.save_csv, "a", newline="") as f:
             csv.writer(f).writerow([
                 self.num_timesteps,
-                q1_mean, q1_abs, q1_std,
-                q2_mean, q2_abs, q2_std,
-                mn_mean, mn_abs, mn_std,
-                gap_abs_mean,
-                loss1, loss2,
-                critic_loss,
-                mean_q_1, mean_q_2
+                q1_mean, q1_std, q1_mean_abs, q1_std_abs,
+                q2_mean, q2_std, q2_mean_abs, q2_std_abs,
+                mn_mean, mn_std, mn_abs_mean, mn_abs_std,
+                gap_abs_mean, gap_abs_std,
+                loss1, loss2, critic_loss,
+                mean_q_1, std_q_1,
+                mean_q_2, std_q_2
             ])
-
-        if hasattr(self, "parent") and isinstance(self.parent, EvalCallback):
-            eval_mean_reward = getattr(self.parent, "last_mean_reward", None)
-            eval_mean_ep_len = getattr(self.parent, "last_mean_ep_length", None)
-
-            if eval_mean_reward is not None:
-                with open(self.reward_csv, "a", newline="") as f:
-                    csv.writer(f).writerow([
-                        self.num_timesteps,
-                        float(eval_mean_reward),
-                        float(eval_mean_ep_len) if eval_mean_ep_len is not None else ""
-                    ])
 
         return True
     
 
-def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", reward_csv="./logs_td3/stats/reward_log.csv", save_path=None):
+def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", save_path=None):
     """
     Read the TD3 q-bias CSV saved by QBiasLoggerTD3 and plot the mean, |mean|, std,
     and overestimation gap for both critics.
@@ -385,27 +358,32 @@ def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", reward_csv="./logs
         raise FileNotFoundError(f"No file found at {csv_path}")
 
     data = np.genfromtxt(csv_path, delimiter=",", names=True)
-    reward_data = np.genfromtxt(reward_csv, delimiter=",", names=True)
-    reward = reward_data["eval_mean_reward"]
-    reward_timesteps = reward_data["timesteps"]
     t = data["timesteps"]
 
     plt.figure(figsize=(9, 5))
 
     # Plot both critics’ mean biases
     plt.plot(t, data["q1_mean"], label="Q1 mean bias")
+    plt.fill_between(t, data["q1_mean"] - data["q1_std"], data["q1_mean"] + data["q1_std"], alpha=0.2, label="±1 std (batch)")
     plt.plot(t, data["q2_mean"], label="Q2 mean bias")
+    plt.fill_between(t, data["q2_mean"] - data["q2_std"], data["q2_mean"] + data["q2_std"], alpha=0.2, label="±1 std (batch)")
     plt.plot(t, data["min_mean"], label="min(Q1, Q2) mean bias")
+    plt.fill_between(t, data["min_mean"] - data["min_std"], data["min_mean"] + data["min_std"], alpha=0.2, label="±1 std (batch)")
 
     # Plot abs bias as dashed lines
     plt.plot(t, data["q1_mean_abs"], "--", label="Q1 mean |bias|")
+    plt.fill_between(t, data["q1_mean_abs"] - data["q1_std_abs"], data["q1_mean_abs"] + data["q1_std_abs"], alpha=0.2, label="±1 std (batch)")
     plt.plot(t, data["q2_mean_abs"], "--", label="Q2 mean |bias|")
+    plt.fill_between(t, data["q2_mean_abs"] - data["q2_std_abs"], data["q2_mean_abs"] + data["q2_std_abs"], alpha=0.2, label="±1 std (batch)")
     plt.plot(t, data["min_mean_abs"], "--", label="min(Q1,Q2) mean |bias|")
+    plt.fill_between(t, data["min_mean_abs"] - data["min_std_abs"], data["min_mean_abs"] + data["min_std_abs"], alpha=0.2, label="±1 std (batch)")
+
 
     # Plot the overestimation gap
     if "overestimation_gap_mean_abs" in data.dtype.names:
         plt.plot(t, data["overestimation_gap_mean_abs"], ":", color="black",
                  label="|Q1 - Q2| (mean abs gap)")
+        plt.fill_between(t, data["overestimation_gap_mean_abs"] - data["overestimation_gap_std_abs"], data["overestimation_gap_mean_abs"] + data["overestimation_gap_std_abs"], alpha=0.2, label="±1 std (batch)")
 
     plt.xlabel("Timesteps")
     plt.ylabel("Bias value")
@@ -434,7 +412,9 @@ def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", reward_csv="./logs
     # --- Mean Q values ---
     plt.figure(figsize=(9, 5))
     plt.plot(t, data["mean_q_1"], label="mean Q1")
+    plt.fill_between(t, data["mean_q_1"] - data["std_q_1"], data["mean_q_1"] + data["std_q_1"], alpha=0.2, label="±1 std (natch)")
     plt.plot(t, data["mean_q_2"], label="mean Q2")
+    plt.fill_between(t, data["mean_q_2"] - data["std_q_2"], data["mean_q_2"] + data["std_q_2"], alpha=0.2, label="±1 std (batch)")
     plt.xlabel("Timesteps"); plt.ylabel("Q-value")
     plt.title("TD3 Mean Q-values vs Timesteps")
     plt.grid(True, alpha=0.3); plt.legend()
@@ -442,16 +422,26 @@ def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", reward_csv="./logs
     plt.tight_layout(); plt.savefig(p3, dpi=200); plt.close()
 
 
+    data = np.load("./td3_eval/evaluations.npz", allow_pickle=True)
+    # arrays of shape (num_evals, variable-length lists)
+    timesteps = data["timesteps"]
+    results = data["results"]        # list of lists of rewards
+    reward_std = np.array([np.std(r) for r in results])
+    reward_mean = np.array([np.mean(r) for r in results])
+    ep_lengths = data["ep_lengths"]  # list of lists of lengths
+    mean_lengths = np.array([np.mean(l) for l in ep_lengths])
+    std_lengths = np.array([np.std(l) for l in ep_lengths])
     plt.figure(figsize=(7, 4))
-    plt.plot(reward_timesteps, reward, label="Reward")
+    plt.plot(timesteps, reward_mean, label="Reward")
+    plt.fill_between(timesteps, reward_mean - reward_std, reward_mean + reward_std, alpha=0.2, label="±1 std (batch)")
+    # plt.plot(timesteps, mean_lengths, label="Reward Episode Length")
+    # plt.fill_between(timesteps, mean_lengths- std_lengths, mean_lengths+ std_lengths, alpha=0.2, label="±1 std (seeds)")
     plt.xlabel("Timesteps")
     plt.ylabel("Reward")
-    plt.title("TD3 Reward vs Timesteps")
+    plt.title("DDPG Reward vs Timesteps")
     plt.grid(True, alpha=0.3)
     plt.legend()
-
     save_path = os.path.join(os.path.dirname(csv_path), "rewards_plot.png")
-
     plt.tight_layout()
     plt.savefig(save_path, dpi=200)
     plt.close()
@@ -461,5 +451,5 @@ def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", reward_csv="./logs
 
 
 if __name__ == "__main__":
-    #plot_stats_td3()
-    plot_stats_ddpg()
+    plot_stats_td3()
+    #plot_stats_ddpg()
