@@ -122,7 +122,7 @@ class QBiasLoggerDDPG(BaseCallback):
         return True
 
 
-def plot_qbias_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv"):
+def plot_stats_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv"):
     """
     Read the q-bias CSV saved by QBiasLoggerDDPG and plot the mean, |mean| and std.
 
@@ -355,7 +355,7 @@ class QBiasLoggerTD3(BaseCallback):
         return True
     
 
-def plot_qbias_td3(csv_path="./logs_td3/qbias/qbias_log.csv", save_path=None):
+def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", save_path=None):
     """
     Read the TD3 q-bias CSV saved by QBiasLoggerTD3 and plot the mean, |mean|, std,
     and overestimation gap for both critics.
@@ -400,9 +400,31 @@ def plot_qbias_td3(csv_path="./logs_td3/qbias/qbias_log.csv", save_path=None):
     plt.savefig(save_path, dpi=200)
     plt.close()
     print(f"TD3 Q-bias plot saved at: {save_path}")
+
+   # --- Critic losses ---
+    plt.figure(figsize=(9, 5))
+    plt.plot(t, data["loss1"], label="loss1 (MSE(Q1,target))")
+    plt.plot(t, data["loss2"], label="loss2 (MSE(Q2,target))")
+    plt.plot(t, data["critic_loss"], label="critic_loss (avg)")
+    plt.xlabel("Timesteps"); plt.ylabel("Loss")
+    plt.title("TD3 Critic Loss vs Timesteps")
+    plt.grid(True, alpha=0.3); plt.legend()
+    p2 = os.path.join(os.path.dirname(csv_path), "td3_critic_loss.png")
+    plt.tight_layout(); plt.savefig(p2, dpi=200); plt.close()
+
+    # --- Mean Q values ---
+    plt.figure(figsize=(9, 5))
+    plt.plot(t, data["mean_q_1"], label="mean Q1")
+    plt.plot(t, data["mean_q_2"], label="mean Q2")
+    plt.xlabel("Timesteps"); plt.ylabel("Q-value")
+    plt.title("TD3 Mean Q-values vs Timesteps")
+    plt.grid(True, alpha=0.3); plt.legend()
+    p3 = os.path.join(os.path.dirname(csv_path), "td3_mean_q.png")
+    plt.tight_layout(); plt.savefig(p3, dpi=200); plt.close()
+
     return save_path
 
 
 if __name__ == "__main__":
-    #plot_qbias_td3()
-    plot_qbias_ddpg()
+    plot_stats_td3()
+    #plot_stats_ddpg()

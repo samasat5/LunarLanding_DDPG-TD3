@@ -12,7 +12,7 @@ from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import EvalCallback, EveryNTimesteps
 from stable_baselines3.common.env_util import make_vec_env  
 from stable_baselines3.common.vec_env import VecNormalize
-from utils_sb3 import QBiasLoggerDDPG, plot_qbias_ddpg
+from utils_sb3 import TapEvalViaLogger, QBiasLoggerDDPG, plot_stats_ddpg
 
 # TO ADD : ????????????????????????????????????????????????
 # Optional: critic_target_std = q_next.std().item() — catches target explosion
@@ -26,7 +26,7 @@ from utils_sb3 import QBiasLoggerDDPG, plot_qbias_ddpg
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
-TOTAL_FRAMES = 100_000 # 1_000_000
+TOTAL_FRAMES = 1000_000 # 1_000_000
 FRAMES_PER_BATCH = 100 # train freq
 OPTIM_STEPS =  10 # gradient steps
 BUFFER_LEN = 1_000_000
@@ -68,7 +68,7 @@ eval_callback = EvalCallback( # The callback runs episodes on eval_env every EVA
     eval_freq=EVAL_EVERY,
     n_eval_episodes=EVAL_EPISODES,
     deterministic=True,
-    render=True,
+    render=False,
 )
 qbias_cb = QBiasLoggerDDPG(gamma=GAMMA, sample_n=50_000, save_csv="./logs_ddpg/stats/stats_log.csv")
 # trigger every EVAL_EVERY timesteps (works with n_envs>1 too, because it uses num_timesteps)
@@ -115,7 +115,7 @@ eval_env.close()
 env.close()
 
 if __name__ == "__main__":
-    plot_qbias_ddpg()
+    plot_stats_ddpg()
     
 
     
