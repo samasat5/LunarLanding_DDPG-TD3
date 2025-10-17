@@ -40,12 +40,12 @@ BUFFER_LEN = 1_000_000
 REPLAY_BUFFER_SAMPLE = 128
 LOG_EVERY = 1000
 MLP_SIZE = 256
-TAU = 0.01
+TAU = 0.005
 GAMMA = 0.99
 EVAL_EVERY = 10_000   # frames
 EVAL_EPISODES = 10
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
-UPDATE_ACTOR_EVERY = 2
+UPDATE_ACTOR_EVERY = 3
 # Seed the Python and RL environments to replicate similar results across training sessions. 
 
 # 1. Environment
@@ -194,9 +194,7 @@ def train(
     eval_steps = []
     update_step = 0
     
-    env_steps = 0
-    episodes = 0
-    since_eval = 0 
+
     optim_actor = Adam(loss.actor_network_params.values(True, True),  lr=3e-4)
     
     if method == "TD3":
@@ -207,12 +205,7 @@ def train(
     pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True) if method=="DDPG" else tqdm(total=TOTAL_FRAMES, desc="Training TD3", dynamic_ncols=True)
     for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
         replay_buffer.extend(data) # add data to the replay buffer
-        
-        frames_in_batch = data.batch_size[0] 
-        env_steps += frames_in_batch
-        since_eval += frames_in_batch
-        episodes += data.get(("next","done")).sum().item()
-        
+
         max_length = replay_buffer[:]["next", "step_count"].max()
         # pdb.set_trace()
         if len(replay_buffer) <= INIT_RAND_STEPS: 
@@ -324,28 +317,6 @@ def train(
             torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
             # torchrl_logger.info(f"Steps: {total_count}, Episodes: {total_episodes}, Max Ep Len: {max_length}, ReplayBuffer: {len(replay_buffer)}, Q: {torch.tensor(qvalues[-50:]).item():.3f} [END]")
     
-        if since_eval >= EVAL_EVERY:
-            policy.eval()
-            with torch.no_grad():
-                rewards, lens = [], []
-                for _ in range(EVAL_EPISODES):
-                    td = eval_env.reset()
-                    done = False
-                    ep_ret = 0.0
-                    while not done:
-                        td = policy(td)
-                        td = eval_env.step(td)
-                        ep_ret += td[("next","reward")].item()
-                        done = td[("next","done")].item()
-                        td = td.get("next")
-                    rewards.append(ep_ret)
-                    lens.append(int(td.get("step_count", 0)))
-            mean_reward = sum(rewards) / len(rewards)
-            eval_rewards.append(mean_reward)
-            eval_steps.append(env_steps)
-            torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
-            policy.train()
-            since_eval = 0
 
 
     pbar.close()
@@ -371,15 +342,7 @@ def train(
     plt.title(f"Training {method} - smoothed Q Values")
     plt.xlabel("Training Steps")
     plt.show()
-    
-    plt.figure(figsize=(10,4))
-    plt.plot(eval_steps, eval_rewards, label="Eval reward")
-    plt.xlabel("Environment steps")
-    plt.ylabel("Average return (over eval episodes)")
-    plt.title("TD3 – Evaluation Reward")
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.show()
+
 
 
 
