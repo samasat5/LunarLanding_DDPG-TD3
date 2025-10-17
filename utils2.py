@@ -6,36 +6,38 @@ from tensordict import TensorDict
 
 class QValueEnsembleModule(nn.Module):
     """
-    Wrap two TensorDictModules (q1, q2) that each write 'state_action_value' (shape [..., 1])
-    and return a single TensorDict with 'state_action_value' of shape [..., 2].
-    TD3Loss(num_qvalue_nets=2) can then split those heads internally.
+    Wrap two TensorDictModules (q1, q2) that each read ('observation','action')
+    and produce two separate outputs:
+      - 'state_action_value1' : [..., 1]
+      - 'state_action_value2' : [..., 1]
+    TD3Loss will take the min for target bootstrapping and compute both critic losses.
     """
-    def __init__(self, q1: nn.Module, q2: nn.Module, out_key: str = "state_action_value"):
+    def __init__(self, q1: nn.Module, q2: nn.Module):
         super().__init__()
         self.q1 = q1
         self.q2 = q2
-        self.out_key = out_key
         # propagate in_keys so TorchRL can inspect them
         self.in_keys = getattr(q1, "in_keys", getattr(q1, "_in_keys", None))
         if getattr(self, "_in_keys", None) is None:
             self._in_keys = self.in_keys
+        self.out_keys = ["state_action_value1", "state_action_value2"]
 
-    def forward(self, tensordict):
+    def forward(self, tensordict: TensorDict):
         td1 = self.q1(tensordict.clone())
         td2 = self.q2(tensordict.clone())
 
-        q1 = td1.get(self.out_key)  # expected shape [..., 1]
-        q2 = td2.get(self.out_key)  # expected shape [..., 1]
-        if q1 is None or q2 is None:
+        v1 = td1.get("state_action_value")
+        v2 = td2.get("state_action_value")
+        if v1 is None or v2 is None:
             raise KeyError(
-                f"Critics must write '{self.out_key}'. Got keys {list(td1.keys())} and {list(td2.keys())}."
+                f"Critics must write 'state_action_value'. Got {list(td1.keys())} and {list(td2.keys())}."
             )
 
-        # Concatenate heads on the last dimension => shape [..., 2]
-        q = torch.cat([q1, q2], dim=-1)
-
-        out = TensorDict({self.out_key: q}, batch_size=tensordict.batch_size)
+        out = tensordict.clone()
+        out.set("state_action_value1", v1)  # [..., 1]
+        out.set("state_action_value2", v2)  # [..., 1]
         return out
+
 
 
 def soft_update(target_network, source_network, tau):
