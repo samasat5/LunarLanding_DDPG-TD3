@@ -281,7 +281,7 @@ def train(
                     optim_actor.zero_grad(set_to_none=True)
                     loss_pi = loss_out["loss_actor"]
                     loss_pi.backward()
-                    torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)
+                    torch.nn.utils.clip_grad_norm_(loss.actor_network_params.values(True, True), 1.0)
                     optim_actor.step()
                     for p in critic.parameters(): p.requires_grad = True
 
