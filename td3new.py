@@ -112,17 +112,45 @@ with torch.no_grad():
 # Targets
 actor_target = deepcopy(actor_net)
 critic_target = deepcopy(critic_net)
+# twin critics (lazy in_features; TDM will feed tensors)
+critic1_mlp = MLP(
+    out_features=1,
+    num_cells=[MLP_SIZE, MLP_SIZE],
+    activation_class=nn.ReLU,
+    activate_last_layer=False,
+)
+critic2_mlp = MLP(
+    out_features=1,
+    num_cells=[MLP_SIZE, MLP_SIZE],
+    activation_class=nn.ReLU,
+    activate_last_layer=False,
+)
 
+critic1 = TDM(
+    critic1_mlp,
+    in_keys=["observation", "action"],
+    out_keys=["state_action_value"],
+)
+critic2 = TDM(
+    critic2_mlp,
+    in_keys=["observation", "action"],
+    out_keys=["state_action_value"],
+)
 
 
 loss = TD3Loss(
-    actor_network=actor_for_loss,  #TODO
-    qvalue_network=critic_net,
+    actor_network=policy,
+    qvalue_network=[critic1, critic2],  # explicit twins
+    num_qvalue_nets=2,
     action_spec=env.action_spec,
     loss_function="l2",
     delay_actor=True,
     delay_qvalue=True,
 )
+
+from itertools import chain
+optim_critic = optim.Adam(chain(critic1.parameters(), critic2.parameters()), lr=1e-3)
+
 
 updater = SoftUpdate(loss, tau=TAU)
         
