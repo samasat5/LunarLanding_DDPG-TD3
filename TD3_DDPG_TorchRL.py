@@ -205,6 +205,7 @@ def train(
     eval_steps = []
     update_step = 0
     rewards, rewards_eval = [], []
+    qvalue1, qvalue2 = [], []
     r0 = None
     
 
@@ -313,6 +314,9 @@ def train(
             
             
             qvalues.append(loss_out["pred_value"].mean().item()) 
+            qvalue1.append(loss_out["pred_value"][0].mean().item())  
+            qvalue2.append(loss_out["pred_value"][1].mean().item())
+            pdb.set_trace()
 
         rewards.append((i,td["next", "reward"].mean().item(),))
     
