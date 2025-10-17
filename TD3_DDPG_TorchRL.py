@@ -29,7 +29,7 @@ from tqdm import tqdm
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 5_000
+TOTAL_FRAMES = 10_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -313,8 +313,9 @@ def train(
         #         torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
         
         pdb.set_trace()
-        if (total_count // eval_every) != ((total_count - data.numel()) // eval_every):
-            
+        # if (total_count // eval_every) != ((total_count - data.numel()) // eval_every):
+        if total_count % eval_every < data.numel():
+
             eval_env.transform[2].load_state_dict(env.transform[2].state_dict())
 
             mc_mean_bias, mc_details = evaluate_mc_bias(
