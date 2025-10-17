@@ -12,7 +12,7 @@ from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import EvalCallback, EveryNTimesteps
 from stable_baselines3.common.env_util import make_vec_env  
 from stable_baselines3.common.vec_env import VecNormalize
-from utils_sb3 import TapEvalViaLogger, QBiasLoggerDDPG, plot_stats_ddpg
+from utils_sb3 import QBiasLoggerDDPG, plot_stats_ddpg
 
 # TO ADD : ????????????????????????????????????????????????
 # Optional: critic_target_std = q_next.std().item() — catches target explosion
