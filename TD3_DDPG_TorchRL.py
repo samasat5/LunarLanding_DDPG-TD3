@@ -313,34 +313,34 @@ def train(
     torchrl_logger.info(
         f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
     )
-    # window = 200  # adjust for smoothing strength
-    # smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
-    # plt.figure(figsize=(12,5))
-    # plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
-    # plt.title(f"Training {method} - TD Bias")
-    # plt.title(f"Training {method} - Bias")
-    # plt.xlabel("Training Steps")
-    # plt.show()
+    window = 200  # adjust for smoothing strength
+    smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
+    plt.figure(figsize=(12,5))
+    plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
+    plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
+    plt.title(f"Training {method} - TD Bias")
+    plt.title(f"Training {method} - Bias")
+    plt.xlabel("Training Steps")
+    plt.show()
 
-    # smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
-    # plt.figure(figsize=(12,5))
-    # plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
-    # # plt.title(f"Training {method} - smoothed Q Values")
-    # plt.xlabel("Training Steps")
-    # plt.show()
+    smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
+    plt.figure(figsize=(12,5))
+    plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
+    plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
+    # plt.title(f"Training {method} - smoothed Q Values")
+    plt.xlabel("Training Steps")
+    plt.show()
     
-    # accumulated_rewards = np.cumsum(eval_rewards)
+    accumulated_rewards = np.cumsum(eval_rewards)
 
-    # plt.figure(figsize=(10,5))
-    # plt.plot(eval_steps, accumulated_rewards, label=f'Accumulated Evaluation Rewards - {method}', color='tab:green')
-    # plt.xlabel('Training Steps')
-    # plt.ylabel('Accumulated Reward')
-    # plt.title(f'{method} - Accumulated Evaluation Reward')
-    # plt.legend()
-    # plt.grid(True)
-    # plt.show()
+    plt.figure(figsize=(10,5))
+    plt.plot(eval_steps, accumulated_rewards, label=f'Accumulated Evaluation Rewards - {method}', color='tab:green')
+    plt.xlabel('Training Steps')
+    plt.ylabel('Accumulated Reward')
+    plt.title(f'{method} - Accumulated Evaluation Reward')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
     
     return eval_steps, eval_rewards
 
@@ -396,15 +396,4 @@ td3_steps, td3_rewards = train(
 )
 
 
-ddpg_accumulated = np.cumsum(ddpg_rewards)
-td3_accumulated  = np.cumsum(td3_rewards)
 
-plt.figure(figsize=(10,5))
-plt.plot(ddpg_steps, ddpg_accumulated, label='DDPG Accumulated Reward', linewidth=2)
-plt.plot(td3_steps, td3_accumulated, label='TD3 Accumulated Reward', linewidth=2)
-plt.xlabel('Training Steps')
-plt.ylabel('Accumulated Reward')
-plt.title('Accumulated Rewards - DDPG vs TD3')
-plt.legend()
-plt.grid(True)
-plt.show()
