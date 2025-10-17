@@ -103,7 +103,7 @@ def eval_mc_bias(policy, critic, env, gamma=0.99, episodes=10, device="cpu"):
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 200_000
+TOTAL_FRAMES = 10_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -275,6 +275,7 @@ def train(
     qvalue1, qvalue2 = [], []
     episode_returns = []
     ep_return = 0.0
+    mc_bias_means, mc_bias_steps = [], []
     
 
     optim_actor = Adam(loss.actor_network_params.values(True, True),  lr=2e-4)
@@ -368,7 +369,19 @@ def train(
             qvalues.append(loss_out["pred_value"].mean().item()) 
             # qvalue1.append(loss_out["pred_value"][0].mean().item())  
             # qvalue2.append(loss_out["pred_value"][1].mean().item())
-          
+                    # === Periodic Monte Carlo bias evaluation ===
+            if total_count % eval_every == 0:
+                # Switch to eval policy (no exploration); reuse eval_env
+                mc = eval_mc_bias(policy=policy, critic=critic, env=eval_env,
+                                gamma=GAMMA, episodes=EVAL_EPISODES, device=DEVICE)
+                mc_bias_means.append(mc["bias_mean"])
+                mc_bias_steps.append(total_count)
+                torchrl_logger.info(
+                    f"[MC] steps={total_count}  bias_mean={mc['bias_mean']:.3f}  "
+                    f"bias_std={mc['bias_std']:.3f}  q_mean={mc['q_mean']:.3f}  g_mean={mc['g_mean']:.3f}"
+                )
+
+            
 
         rewards.append((i,td["next", "reward"].mean().item(),))
     
