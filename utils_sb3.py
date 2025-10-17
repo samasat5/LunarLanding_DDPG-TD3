@@ -1,13 +1,18 @@
 # utils_sb3.py
 import numpy as np, torch, os, csv, matplotlib.pyplot as plt, pdb
 from stable_baselines3.common.callbacks import BaseCallback
+import torch.nn.functional as F
+from collections import deque
+import pandas as pd
 
 class QBiasLoggerDDPG(BaseCallback):
-    def __init__(self, gamma: float, sample_n: int = 50_000, save_csv: str = "./logs_ddpg/qbias/qbias_log.csv"):
+    def __init__(self, gamma: float, sample_n: int = 50_000, reward_window: int = 200, save_csv: str = "./logs_ddpg/stats/stats_log.csv"):
         super().__init__()
         self.gamma = gamma
         self.sample_n = sample_n
         self.save_csv = save_csv
+        self._ep_rews = deque(maxlen=reward_window)
+        self._ep_lens = deque(maxlen=reward_window)
         os.makedirs(os.path.dirname(save_csv), exist_ok=True)
         if not os.path.exists(save_csv):
             with open(save_csv, "w", newline="") as f:
@@ -17,7 +22,35 @@ class QBiasLoggerDDPG(BaseCallback):
                     "mean_abs_bias",
                     "std_bias",
                     "q_values",
+                    "critic_loss",
+                    # "ep_rew_mean",
+                    # "ep_len_mean"
                 ])
+
+    def _maybe_log_rewards(self):
+        """
+        Collect per-episode rewards/lengths from Monitor via infos/dones.
+        Returns rolling means (ep_rew_mean, ep_len_mean) or (None, None).
+        """
+        infos = self.locals.get("infos")
+        dones = self.locals.get("dones")
+        if infos is None or dones is None:
+            return (None, None)
+
+        for i, d in enumerate(dones):
+            if not bool(d):
+                continue
+            info = infos[i] if i < len(infos) else {}
+            ep = info.get("episode")
+            if ep is None:
+                continue
+            self._ep_rews.append(float(ep.get("r", 0.0)))
+            self._ep_lens.append(int(ep.get("l", 0)))
+
+        if len(self._ep_rews) == 0:
+            return (None, None)
+        return (float(np.mean(self._ep_rews)),
+                float(np.mean(self._ep_lens)) if len(self._ep_lens) else None)
 
     def _on_step(self) -> bool:
         rb = getattr(self.model, "replay_buffer", None)
@@ -62,17 +95,124 @@ class QBiasLoggerDDPG(BaseCallback):
         mean_abs  = float(np.mean(np.abs(bias)))
         std_bias  = float(np.std(bias))
         q_values = float(np.mean(q.cpu().numpy()))
+        critic_loss = float(F.mse_loss(q, target).item())
+        # ep_rew_mean, ep_len_mean = self._maybe_log_rewards()
 
-        self.logger.record("q_bias/q_values", q_values)
-        self.logger.record("q_bias/mean", mean_bias)
-        self.logger.record("q_bias/mean_abs", mean_abs)
-        self.logger.record("q_bias/std", std_bias)
+        self.logger.record("stats/mean", mean_bias)
+        self.logger.record("stats/mean_abs", mean_abs)
+        self.logger.record("stats/std", std_bias)
+        self.logger.record("stats/q_values", q_values)
+        self.logger.record("stats/critic_loss", critic_loss)
+        # if ep_rew_mean is not None:
+        #     self.logger.record("stats/ep_rew_mean", ep_rew_mean)
+        #     self.logger.record("stats/ep_len_mean", ep_len_mean)
 
         with open(self.save_csv, "a", newline="") as f:
-            csv.writer(f).writerow([self.num_timesteps, mean_bias, mean_abs, std_bias, q_values])
+            csv.writer(f).writerow([
+                self.num_timesteps, 
+                mean_bias, 
+                mean_abs, 
+                std_bias, 
+                q_values,
+                critic_loss,
+                # ep_rew_mean if ep_rew_mean is not None else "",
+                # ep_len_mean if ep_len_mean is not None else ""
+            ])
 
         return True
-    
+
+
+def plot_qbias_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv"):
+    """
+    Read the q-bias CSV saved by QBiasLoggerDDPG and plot the mean, |mean| and std.
+
+    :param csv_path: Path to the CSV created by QBiasLogger.
+    :param save_path: Optional path to save the figure. If None, saves next to CSV.
+    :return: Path to the saved PNG.
+    """
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"No file found at {csv_path}")
+
+    # Read CSV with column names
+    data = np.genfromtxt(csv_path, delimiter=",", names=True)
+
+    # # Convert empty strings "" → NaN, then to numeric (coerces errors)
+    # data["ep_rew_mean"] = pd.to_numeric(data["ep_rew_mean"], errors="coerce")
+    # data["ep_len_mean"] = pd.to_numeric(data["ep_len_mean"], errors="coerce")
+
+    # # Drop rows where both are NaN
+    # data = data.dropna(subset=["ep_rew_mean", "ep_len_mean"], how="all")
+ 
+    timesteps = data["timesteps"]
+    mean_bias = data["mean_bias"]
+    mean_abs = data["mean_abs_bias"]
+    std_bias = data["std_bias"]
+    mean_q = data["q_values"]
+    critic_loss = data["critic_loss"]
+    # ep_rew_mean = data["ep_rew_mean"]
+    # ep_len_mean = data["ep_len_mean"]
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(timesteps, mean_bias, label="mean(Q - target)")
+    plt.plot(timesteps, mean_abs, label="mean |Q - target|")
+    plt.plot(timesteps, std_bias, label="std(Q - target)")
+    plt.xlabel("Timesteps")
+    plt.ylabel("Q-bias value")
+    plt.title("DDPG Q-bias vs Timesteps")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+
+    save_path = os.path.join(os.path.dirname(csv_path), "qbias_plot.png")
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=200)
+    plt.close()
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(timesteps, mean_q, label="mean Q-values")
+    plt.xlabel("Timesteps")
+    plt.ylabel("Q-value")
+    plt.title("DDPG Q-value vs Timesteps")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+
+    save_path = os.path.join(os.path.dirname(csv_path), "qvalue_plot.png")
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=200)
+    plt.close()
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(timesteps, critic_loss, label="mean critic loss values")
+    plt.xlabel("Timesteps")
+    plt.ylabel("Critic Loss")
+    plt.title("DDPG Critic Loss vs Timesteps")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+
+    save_path = os.path.join(os.path.dirname(csv_path), "critic_loss_plot.png")
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=200)
+    plt.close()
+
+    # plt.figure(figsize=(7, 4))
+    # plt.plot(timesteps, ep_rew_mean, label="Reward")
+    # plt.plot(timesteps, ep_len_mean, label="Episode Length")
+    # plt.xlabel("Timesteps")
+    # plt.ylabel("Reward")
+    # plt.title("DDPG Reward vs Timesteps")
+    # plt.grid(True, alpha=0.3)
+    # plt.legend()
+
+    # save_path = os.path.join(os.path.dirname(csv_path), "rewards_plot.png")
+
+    # plt.tight_layout()
+    # plt.savefig(save_path, dpi=200)
+    # plt.close()
+
+    print(f"DDPG plots saved at: {save_path}")
+    return save_path
 
 class QBiasLoggerTD3(BaseCallback):
     """
@@ -83,7 +223,7 @@ class QBiasLoggerTD3(BaseCallback):
       - overestimation_gap = mean(|q1 - q2|)
     Also appends a CSV for easy plotting.
     """
-    def __init__(self, gamma: float, sample_n: int = 50_000, save_csv: str = "./logs_td3/qbias/qbias_log.csv"):
+    def __init__(self, gamma: float, sample_n: int = 50_000, save_csv: str = "./logs_td3/stats/stats_log.csv"):
         super().__init__()
         self.gamma = gamma
         self.sample_n = sample_n
@@ -96,7 +236,10 @@ class QBiasLoggerTD3(BaseCallback):
                     "q1_mean","q1_mean_abs","q1_std",
                     "q2_mean","q2_mean_abs","q2_std",
                     "min_mean","min_mean_abs","min_std",
-                    "overestimation_gap_mean_abs"
+                    "overestimation_gap_mean_abs",
+                    "loss1", "loss2",
+                    "critic_loss",
+                    "mean_q_1", "mean_q_2"
                 ])
 
     def _td3_target_actions(self, nxt: torch.Tensor) -> torch.Tensor:
@@ -170,21 +313,31 @@ class QBiasLoggerTD3(BaseCallback):
         q2_mean, q2_abs, q2_std = float(np.mean(bias2)), float(np.mean(np.abs(bias2))), float(np.std(bias2))
         mn_mean, mn_abs, mn_std = float(np.mean(bias_min)), float(np.mean(np.abs(bias_min))), float(np.std(bias_min))
         gap_abs_mean = float(np.mean(over_gap))
+        loss1 = float(F.mse_loss(q1, target).item())
+        loss2 = float(F.mse_loss(q2, target).item())
+        critic_loss = 0.5 * (loss1 + loss2)
+        mean_q_1 = float(torch.mean(q1).item())
+        mean_q_2 = float(torch.mean(q2).item())
 
         # log to SB3 (TensorBoard/CSV if configured)
-        self.logger.record("q_bias/q1_mean", q1_mean)
-        self.logger.record("q_bias/q1_mean_abs", q1_abs)
-        self.logger.record("q_bias/q1_std", q1_std)
+        self.logger.record("stats/q1_mean", q1_mean)
+        self.logger.record("stats/q1_mean_abs", q1_abs)
+        self.logger.record("stats/q1_std", q1_std)
 
-        self.logger.record("q_bias/q2_mean", q2_mean)
-        self.logger.record("q_bias/q2_mean_abs", q2_abs)
-        self.logger.record("q_bias/q2_std", q2_std)
+        self.logger.record("stats/q2_mean", q2_mean)
+        self.logger.record("stats/q2_mean_abs", q2_abs)
+        self.logger.record("stats/q2_std", q2_std)
 
-        self.logger.record("q_bias/min_mean", mn_mean)
-        self.logger.record("q_bias/min_mean_abs", mn_abs)
-        self.logger.record("q_bias/min_std", mn_std)
+        self.logger.record("stats/min_mean", mn_mean)
+        self.logger.record("stats/min_mean_abs", mn_abs)
+        self.logger.record("stats/min_std", mn_std)
 
-        self.logger.record("q_bias/overestimation_gap_abs_mean", gap_abs_mean)
+        self.logger.record("stats/overestimation_gap_abs_mean", gap_abs_mean)
+        self.logger.record("stats/loss1", loss1)
+        self.logger.record("stats/loss2", loss2)
+        self.logger.record("stats/critic_loss", critic_loss)
+        self.logger.record("stats/mean_q_1", mean_q_1)
+        self.logger.record("stats/mean_q_2", mean_q_2)
 
         # append to our CSV
         with open(self.save_csv, "a", newline="") as f:
@@ -193,64 +346,14 @@ class QBiasLoggerTD3(BaseCallback):
                 q1_mean, q1_abs, q1_std,
                 q2_mean, q2_abs, q2_std,
                 mn_mean, mn_abs, mn_std,
-                gap_abs_mean
+                gap_abs_mean,
+                loss1, loss2,
+                critic_loss,
+                mean_q_1, mean_q_2
             ])
 
         return True
     
-
-def plot_qbias_ddpg(csv_path="./logs_ddpg/qbias/qbias_log.csv"):
-    """
-    Read the q-bias CSV saved by QBiasLoggerDDPG and plot the mean, |mean| and std.
-
-    :param csv_path: Path to the CSV created by QBiasLogger.
-    :param save_path: Optional path to save the figure. If None, saves next to CSV.
-    :return: Path to the saved PNG.
-    """
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"No file found at {csv_path}")
-
-    # Read CSV with column names
-    data = np.genfromtxt(csv_path, delimiter=",", names=True)
- 
-    timesteps = data["timesteps"]
-    mean_bias = data["mean_bias"]
-    mean_abs = data["mean_abs_bias"]
-    std_bias = data["std_bias"]
-    mean_q = data["q_values"]
-
-    plt.figure(figsize=(7, 4))
-    plt.plot(timesteps, mean_bias, label="mean(Q - target)")
-    plt.plot(timesteps, mean_abs, label="mean |Q - target|")
-    plt.plot(timesteps, std_bias, label="std(Q - target)")
-    plt.xlabel("Timesteps")
-    plt.ylabel("Q-bias value")
-    plt.title("DDPG Q-bias vs Timesteps")
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-
-    save_path = os.path.join(os.path.dirname(csv_path), "qbias_plot.png")
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=200)
-    plt.close()
-
-    plt.figure(figsize=(7, 4))
-    plt.plot(timesteps, mean_q, label="mean Q-values")
-    plt.xlabel("Timesteps")
-    plt.ylabel("Q-value")
-    plt.title("DDPG Q-value vs Timesteps")
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-
-    save_path = os.path.join(os.path.dirname(csv_path), "qvalue_plot.png")
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=200)
-    plt.close()
-
-    print(f"Q-bias plot and Q-value plot saved at: {save_path}")
-    return save_path
 
 def plot_qbias_td3(csv_path="./logs_td3/qbias/qbias_log.csv", save_path=None):
     """
