@@ -161,8 +161,10 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 )
 
 # 7. Optimizers
-optim_actor = optim.Adam(policy.parameters(), lr=3e-4, weight_decay=0.0)
-optim_critic = optim.Adam(critic.parameters(), lr=3e-3, weight_decay=0)
+# optim_actor = optim.Adam(policy.parameters(), lr=3e-4, weight_decay=0.0)
+# optim_critic = optim.Adam(critic.parameters(), lr=3e-3, weight_decay=0)
+optim_actor = Adam(loss_td3.actor_network_params.parameters(),  lr=3e-4)
+optim_critic = Adam(loss_td3.qvalue_network_params.parameters(), lr=3e-4)
 
 
 def train(
