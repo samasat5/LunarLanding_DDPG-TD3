@@ -33,7 +33,7 @@ on LunarLanderContinuous-v3 environment.
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 600_000
+TOTAL_FRAMES = 200_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -362,6 +362,7 @@ def train(
     
     smooth_returns = np.convolve(episode_returns, np.ones(window)/window, mode='valid')
     plt.figure(figsize=(12,4))
+    plt.xtitle(f"{method} – episodic return")
     plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
     plt.title(f"{method} – episodic return")
@@ -372,6 +373,7 @@ def train(
     
     
     plt.figure(figsize=(12,5))
+    plt.xtitle(f"Training {method} - Bias")
     plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
     plt.title(f"Training {method} - TD Bias")
