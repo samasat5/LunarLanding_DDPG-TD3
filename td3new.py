@@ -124,10 +124,10 @@ with torch.no_grad():
     # _ = actor_target(td0.clone())     # init target actor
     # _ = critic_target(td1.clone())    # init target critic
 
-twin_q = QValueEnsembleModule(critic1, critic2)
+
 loss_td3 = TD3Loss(
     actor_network=policy, # deterministic 
-    qvalue_network=twin_q,
+    qvalue_network=[critic1, critic2],
     loss_function="l2",
     action_spec=env.action_spec,
     delay_actor=True, # for more stability, Default is False
