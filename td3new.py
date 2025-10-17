@@ -140,7 +140,7 @@ critic2 = TDM(
 
 
 loss = TD3Loss(
-    actor_network=actor_for_loss,  #TODO
+    actor_network=policy,  #TODO
     qvalue_network=critic_net,
     action_spec=env.action_spec,
     loss_function="l2",
