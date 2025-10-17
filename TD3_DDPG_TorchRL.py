@@ -105,9 +105,9 @@ critic_mlp = MLP(
     activate_last_layer=False)
 critic = TDM(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
 
-# Target Networks
-actor_target = deepcopy(actor) 
-critic_target = deepcopy(critic)
+# # Target Networks
+# actor_target = deepcopy(actor) 
+# critic_target = deepcopy(critic)
 
 # 4.  loss module
 # --- 4) Warm-up forward to initialize lazy modules BEFORE loss/opt
@@ -117,8 +117,8 @@ with torch.no_grad():
     td1 = td0.clone()
     td1["action"] = env.action_spec.rand(td1.batch_size)
     _ = critic(td1)            # init critic
-    _ = actor_target(td0.clone())     # init target actor
-    _ = critic_target(td1.clone())    # init target critic
+    # _ = actor_target(td0.clone())     # init target actor
+    # _ = critic_target(td1.clone())    # init target critic
 
 loss_ddpg = DDPGLoss(
     actor_network=policy, # deterministic 
