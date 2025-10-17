@@ -12,7 +12,7 @@ from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import EvalCallback, EveryNTimesteps
 from stable_baselines3.common.env_util import make_vec_env  
 from stable_baselines3.common.vec_env import VecNormalize
-from utils_sb3 import QBiasLoggerTD3, plot_qbias_td3
+from utils_sb3 import QBiasLoggerTD3, plot_stats_td3
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
@@ -48,14 +48,14 @@ action_noise = NormalActionNoise(
 logger = configure("./logs_td3/", ["stdout", "csv", "tensorboard"])
 eval_callback = EvalCallback( # The callback runs episodes on eval_env every EVAL_EVERY steps and saves the best model.
     eval_env,
-    # best_model_save_path="./td3_best",
-    # log_path="./td3_eval",
+    best_model_save_path="./td3_best",
+    log_path="./td3_eval",
     eval_freq=EVAL_EVERY,
     n_eval_episodes=EVAL_EPISODES,
     deterministic=True,
-    render=True,
+    render=False,
 )
-qbias_cb = QBiasLoggerTD3(gamma=GAMMA, sample_n=50_000, save_csv="./logs_td3/qbias/qbias_log.csv")
+qbias_cb = QBiasLoggerTD3(gamma=GAMMA, sample_n=50_000, save_csv="./logs_td3/stats/stats_log.csv")
 # trigger every EVAL_EVERY timesteps (works with n_envs>1 too, because it uses num_timesteps)
 every_qbias = EveryNTimesteps(n_steps=EVAL_EVERY, callback=qbias_cb)
 
@@ -91,4 +91,4 @@ eval_env.close()
 env.close()
 
 if __name__ == "__main__":
-    plot_qbias_td3()
+    plot_stats_td3()
