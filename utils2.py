@@ -27,8 +27,12 @@ def evaluate_mc_bias(loss,
         # rollout with deterministic policy (no OU noise)
         while True:
             # td has "observation"
-            td_in = td.select("observation")  
-            td_pi = actor(td_in.clone())  
+            td_in = td.select("observation")
+            td_pi = actor(td_in.clone())
+            td_env = td.clone()
+            td_env.set("action", td_pi["action"])
+            td = eval_env.step(td_env)
+
             ep_obs.append(td_in["observation"])
             ep_act.append(td_pi["action"])
 
