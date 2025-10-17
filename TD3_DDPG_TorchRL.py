@@ -313,7 +313,7 @@ def train(
         if total_count % LOG_EVERY == 0:
             torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
             # torchrl_logger.info(f"Steps: {total_count}, Episodes: {total_episodes}, Max Ep Len: {max_length}, ReplayBuffer: {len(replay_buffer)}, Q: {torch.tensor(qvalues[-50:]).item():.3f} [END]")
-        if total_count % EVAL_EVERY < FRAMES_PER_BATCH: # A vérifier
+        if total_count % EVAL_EVERY < FRAMES_PER_BATCH: 
             policy.eval()
             with torch.no_grad():
                 rewards, lens = [], []
