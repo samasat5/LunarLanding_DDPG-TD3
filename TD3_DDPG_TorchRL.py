@@ -311,8 +311,10 @@ def train(
 
         if total_count % LOG_EVERY == 0:
                 torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
-               
+        
+        pdb.set_trace()
         if (total_count // eval_every) != ((total_count - data.numel()) // eval_every):
+            
             eval_env.transform[2].load_state_dict(env.transform[2].state_dict())
 
             mc_mean_bias, mc_details = evaluate_mc_bias(
