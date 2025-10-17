@@ -394,8 +394,8 @@ def train(
 
 
 train(
-    method="TD3",
-    loss=loss_td3,
+    method="DDPG",
+    loss=loss_ddpg,
     optim_critic=optim_critic,
     optim_actor=optim_actor,
     replay_buffer=replay_buffer,
