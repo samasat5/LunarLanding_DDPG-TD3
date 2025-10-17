@@ -225,27 +225,27 @@ def train(
             td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
             update_step += 1
             
-            # #New Ordering
-            # # single forward pass, reuse loss_out
-            # loss_out = loss(td)
-            # # === Actor update 
-            # for p in critic.parameters(): p.requires_grad = False
-            # optim_actor.zero_grad(set_to_none=True)
-            # loss_pi = loss_out["loss_actor"]        # from the same forward pass
-            # loss_pi.backward()
-            # torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)  # or policy.parameters() / policy param accessor
-            # optim_actor.step()
-            # optim_actor.zero_grad(set_to_none=True)
-            # for p in critic.parameters():
-            #     p.requires_grad = True
-            # # === Critic update ===
-            # optim_critic.zero_grad(set_to_none=True)
-            # loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
-            # loss_q.backward()
-            # torch.nn.utils.clip_grad_norm_(critic.parameters(), 1.0)
-            # optim_critic.step()
-            # # === Update targets after both updates ===
-            # updater.step()
+            #New Ordering
+            # single forward pass, reuse loss_out
+            loss_out = loss(td)
+            # === Actor update 
+            for p in critic.parameters(): p.requires_grad = False
+            optim_actor.zero_grad(set_to_none=True)
+            loss_pi = loss_out["loss_actor"]        # from the same forward pass
+            loss_pi.backward()
+            torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)  # or policy.parameters() / policy param accessor
+            optim_actor.step()
+            optim_actor.zero_grad(set_to_none=True)
+            for p in critic.parameters():
+                p.requires_grad = True
+            # === Critic update ===
+            optim_critic.zero_grad(set_to_none=True)
+            loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
+            loss_q.backward()
+            torch.nn.utils.clip_grad_norm_(critic.parameters(), 1.0)
+            optim_critic.step()
+            # === Update targets after both updates ===
+            updater.step()
             
     
 
