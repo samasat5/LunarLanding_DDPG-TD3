@@ -48,6 +48,17 @@ DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 UPDATE_ACTOR_EVERY = 2
 # Seed the Python and RL environments to replicate similar results across training sessions. 
 
+
+def save_series(fname, raw, smooth, window):
+    sm_padded = np.concatenate([np.full(window-1, np.nan), smooth])
+    data = np.column_stack([np.arange(len(raw)), raw, sm_padded])
+    np.savetxt(
+        fname, data, delimiter=",",
+        header="step,raw,smoothed", comments=""
+    )
+    
+    
+    
 # 1. Environment
 env = TransformedEnv(
     GymEnv("LunarLanderContinuous-v3"),
@@ -321,6 +332,7 @@ def train(
             torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
             # torchrl_logger.info(f"Steps: {total_count}, Episodes: {total_episodes}, Max Ep Len: {max_length}, ReplayBuffer: {len(replay_buffer)}, Q: {torch.tensor(qvalues[-50:]).item():.3f} [END]")
     
+    
 
 
     pbar.close()
@@ -331,6 +343,11 @@ def train(
     )
     window = 200  # adjust for smoothing strength
     smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
+    smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
+    
+    save_series("biases.csv", biases, smooth_bias, window)
+    save_series("qvalues.csv", qvalues, smooth_qvalue, window)
+    
     plt.figure(figsize=(12,5))
     plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
@@ -339,7 +356,6 @@ def train(
     plt.xlabel("Training Steps")
     plt.show()
 
-    smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     plt.figure(figsize=(12,5))
     plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
