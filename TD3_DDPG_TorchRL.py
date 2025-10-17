@@ -193,6 +193,10 @@ def train(
     eval_rewards = []       
     eval_steps = []
     update_step = 0
+    
+    env_steps = 0
+    episodes = 0
+    since_eval = 0 
     optim_actor = Adam(loss.actor_network_params.values(True, True),  lr=3e-4)
     
     if method == "TD3":
@@ -313,28 +317,30 @@ def train(
         if total_count % LOG_EVERY == 0:
             torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
             # torchrl_logger.info(f"Steps: {total_count}, Episodes: {total_episodes}, Max Ep Len: {max_length}, ReplayBuffer: {len(replay_buffer)}, Q: {torch.tensor(qvalues[-50:]).item():.3f} [END]")
-        if total_count % EVAL_EVERY < FRAMES_PER_BATCH: 
+    
+        if since_eval >= EVAL_EVERY:
             policy.eval()
             with torch.no_grad():
                 rewards, lens = [], []
                 for _ in range(EVAL_EPISODES):
                     td = eval_env.reset()
                     done = False
-                    episode_reward = 0.0
+                    ep_ret = 0.0
                     while not done:
                         td = policy(td)
                         td = eval_env.step(td)
-                        episode_reward += td["next", "reward"].item()
-                        done = td["next", "done"].item()
+                        ep_ret += td[("next","reward")].item()
+                        done = td[("next","done")].item()
                         td = td.get("next")
-                    lens.append(int(td.get("step_count",0)))    
-                    rewards.append(episode_reward)
-                mean_reward = sum(rewards) / EVAL_EPISODES
-                eval_rewards.append(mean_reward)
-                eval_steps.append(total_count)
-                pdb.set_trace()
-                torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
+                    rewards.append(ep_ret)
+                    lens.append(int(td.get("step_count", 0)))
+            mean_reward = sum(rewards) / len(rewards)
+            eval_rewards.append(mean_reward)
+            eval_steps.append(env_steps)
+            torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
             policy.train()
+            since_eval = 0
+
 
     pbar.close()
     t1 = time.time()
