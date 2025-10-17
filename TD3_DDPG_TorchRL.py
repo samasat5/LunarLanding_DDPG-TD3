@@ -265,7 +265,7 @@ def train(
                 pdb.set_trace()
                 bias_q1 = (pred_q1 - target_q).mean().item()
                 bias_q2 = (pred_q2 - target_q).mean().item()
-                bias_batch = (bias_q1 + bias_q2) / 2
+                bias_batch = np.mean(bias_q1, bias_q2)
             
             biases.append(bias_batch)
 
