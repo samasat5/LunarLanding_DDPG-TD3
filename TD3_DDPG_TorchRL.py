@@ -227,28 +227,28 @@ def train(
             td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
             update_step += 1
             
-            #New Ordering
-            # single forward pass, reuse loss_out
-            loss_out = loss(td)
-            # === Actor update 
-            for p in critic.parameters(): p.requires_grad = False
-            optim_actor.zero_grad(set_to_none=True)
-            loss_pi = loss_out["loss_actor"]        # from the same forward pass
-            loss_pi.backward()
-            torch.nn.utils.clip_grad_norm_(loss.actor_network_params.values(True, True), 1.0)  # or policy.parameters() / policy param accessor
-            optim_actor.step()
-            optim_actor.zero_grad(set_to_none=True)
-            for p in critic.parameters():
-                p.requires_grad = True
-            # === Critic update ===
-            optim_critic.zero_grad(set_to_none=True)
-            loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
-            loss_q.backward()
-            torch.nn.utils.clip_grad_norm_(loss.value_network_params.values(True, True), 1.0) if method == "DDPG" else torch.nn.utils.clip_grad_norm_(loss.qvalue_network_params.values(True, True), 1.0)
-             # or critic.parameters() / critic param accessor
-            optim_critic.step()
-            # === Update targets after both updates ===
-            updater.step()
+            # #New Ordering
+            # # single forward pass, reuse loss_out
+            # loss_out = loss(td)
+            # # === Actor update 
+            # for p in critic.parameters(): p.requires_grad = False
+            # optim_actor.zero_grad(set_to_none=True)
+            # loss_pi = loss_out["loss_actor"]        # from the same forward pass
+            # loss_pi.backward()
+            # torch.nn.utils.clip_grad_norm_(loss.actor_network_params.values(True, True), 1.0)  # or policy.parameters() / policy param accessor
+            # optim_actor.step()
+            # optim_actor.zero_grad(set_to_none=True)
+            # for p in critic.parameters():
+            #     p.requires_grad = True
+            # # === Critic update ===
+            # optim_critic.zero_grad(set_to_none=True)
+            # loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
+            # loss_q.backward()
+            # torch.nn.utils.clip_grad_norm_(loss.value_network_params.values(True, True), 1.0) if method == "DDPG" else torch.nn.utils.clip_grad_norm_(loss.qvalue_network_params.values(True, True), 1.0)
+            #  # or critic.parameters() / critic param accessor
+            # optim_critic.step()
+            # # === Update targets after both updates ===
+            # updater.step()
             
         
 
@@ -314,7 +314,7 @@ def train(
         if len(rewards_eval) >= INIT_RAND_STEPS:
             target_value = loss_out
             loss_value = loss_out["loss_value"].item()
-            loss_actor = loss_out["loss_actor"].item()
+            loss_actor = loss_dict["loss_actor"].item()
             rn = sampled_tensordict["next", "reward"].mean().item()
             rs = sampled_tensordict["next", "reward"].std().item()
             pbar.set_description(
