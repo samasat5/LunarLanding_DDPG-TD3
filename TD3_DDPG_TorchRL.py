@@ -262,6 +262,7 @@ def train(
             else:
                 pred_q1, pred_q2 = loss_out["pred_value"] 
                 target_q = loss_out["target_value"]
+                pdb.set_trace()
                 bias_q1 = (pred_q1 - target_q).mean().item()
                 bias_q2 = (pred_q2 - target_q).mean().item()
                 bias_batch = (bias_q1 + bias_q2) / 2
