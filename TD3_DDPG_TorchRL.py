@@ -304,6 +304,7 @@ def train(
             qvalues.append(loss_out["pred_value"].mean().item()) 
 
         rewards.append((i,td["next", "reward"].mean().item(),))
+        pdb.set_trace()
         
         success_steps.append(max_length)
         total_count += data.numel()
