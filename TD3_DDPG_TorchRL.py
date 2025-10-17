@@ -251,6 +251,7 @@ def train(
             # Critic update
             optim_critic.zero_grad(set_to_none=True)
             loss_q.backward()
+            torch.nn.utils.clip_grad_norm_(loss.value_network_params.values(True, True), 1.0) if method == "DDPG" else torch.nn.utils.clip_grad_norm_(loss.qvalue_network_params.values(True, True), 1.0)
             optim_critic.step()
 
             # Recompute loss_out so actor loss uses the updated critic params
