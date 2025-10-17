@@ -33,7 +33,7 @@ on LunarLanderContinuous-v3 environment.
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 300_000
+TOTAL_FRAMES = 200_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -116,9 +116,6 @@ critic_mlp = MLP(
     activate_last_layer=False)
 critic = TDM(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
 
-# # Target Networks
-# actor_target = deepcopy(actor) 
-# critic_target = deepcopy(critic)
 
 # 4.  loss module
 # --- 4) Warm-up forward to initialize lazy modules BEFORE loss/opt
@@ -274,7 +271,7 @@ def train(
             # Critic update
             optim_critic.zero_grad(set_to_none=True)
             loss_q.backward()
-            torch.nn.utils.clip_grad_norm_(loss.value_network_params.values(True, True), 1.0) if method == "DDPG" else torch.nn.utils.clip_grad_norm_(loss.qvalue_network_params.values(True, True), 1.0)
+            # torch.nn.utils.clip_grad_norm_(loss.value_network_params.values(True, True), 1.0) if method == "DDPG" else torch.nn.utils.clip_grad_norm_(loss.qvalue_network_params.values(True, True), 1.0)
             optim_critic.step()
 
             # Recompute loss_out so actor loss uses the updated critic params
@@ -297,7 +294,7 @@ def train(
                     optim_actor.zero_grad(set_to_none=True)
                     loss_pi = loss_out["loss_actor"]
                     loss_pi.backward()
-                    torch.nn.utils.clip_grad_norm_(loss.actor_network_params.values(True, True), 1.0)
+                    # torch.nn.utils.clip_grad_norm_(loss.actor_network_params.values(True, True), 1.0)
                     optim_actor.step()
                     for p in critic.parameters(): p.requires_grad = True
 
@@ -367,6 +364,7 @@ def train(
     plt.figure(figsize=(12,4))
     plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
+    plt.xtitle(f"{method} – episodic return")
     plt.title(f"{method} – episodic return")
     plt.xlabel("Episode")
     plt.ylabel("Return")
@@ -375,6 +373,7 @@ def train(
     
     
     plt.figure(figsize=(12,5))
+    plt.xtitle(f"Training {method} - Bias")
     plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
     plt.title(f"Training {method} - TD Bias")
@@ -383,6 +382,7 @@ def train(
     plt.show()
 
     plt.figure(figsize=(12,5))
+    plt.xtitle(f"Training {method} - Q Values")
     plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
     plt.title(f"Training {method} - smoothed Q Values")
@@ -394,8 +394,8 @@ def train(
 
 
 train(
-    method="DDPG",
-    loss=loss_ddpg,
+    method="TD3",
+    loss=loss_td3,
     optim_critic=optim_critic,
     optim_actor=optim_actor,
     replay_buffer=replay_buffer,
