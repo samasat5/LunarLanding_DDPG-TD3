@@ -193,6 +193,8 @@ def train(
     eval_rewards = []       
     eval_steps = []
     update_step = 0
+    rewards, rewards_eval = [], []
+    r0 = None
     
 
     optim_actor = Adam(loss.actor_network_params.values(True, True),  lr=3e-4)
@@ -248,10 +250,8 @@ def train(
             # === Update targets after both updates ===
             updater.step()
             
-    
+        
 
-            
-            
             
             loss_out = loss(td)
             loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
@@ -288,9 +288,7 @@ def train(
                     # === Soft update targets only when actor is updated ===
                     updater.step()
             
-            
-            
-            
+        
         
             # Record TD bias
             if method == "DDPG":
@@ -312,7 +310,8 @@ def train(
             
             qvalues.append(loss_out["pred_value"].mean().item()) 
 
-
+        rewards.append((i,tensordict["next", "reward"].mean().item(),))
+        
         success_steps.append(max_length)
         total_count += data.numel()
         total_episodes += data["next", "done"].sum().item()
