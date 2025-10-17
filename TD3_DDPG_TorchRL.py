@@ -304,7 +304,7 @@ def train(
             qvalues.append(loss_out["pred_value"].mean().item()) 
 
         rewards.append((i,td["next", "reward"].mean().item(),))
-        pdb.set_trace()
+    
         
         success_steps.append(max_length)
         total_count += data.numel()
@@ -322,7 +322,7 @@ def train(
             # torchrl_logger.info(f"Steps: {total_count}, Episodes: {total_episodes}, Max Ep Len: {max_length}, ReplayBuffer: {len(replay_buffer)}, Q: {torch.tensor(qvalues[-50:]).item():.3f} [END]")
     
 
-
+    pdb.set_trace()
     pbar.close()
     t1 = time.time()    
     print(f"Training took {t1-t0:.2f}s")
