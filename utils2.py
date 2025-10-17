@@ -34,12 +34,9 @@ def evaluate_mc_bias(loss,
             td_env.set("action", td_pi["action"])
             td = eval_env.step(td_env)
 
-    
             ep_obs.append(td_in["observation"])
             ep_act.append(td_pi["action"])
 
-            pdb.set_trace()
-            # Step env
             td = eval_env.step(td_pi)
             ep_rew.append(td["next", "reward"].item())
 
