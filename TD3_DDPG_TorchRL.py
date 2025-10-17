@@ -45,7 +45,7 @@ GAMMA = 0.99
 EVAL_EVERY = 10_000   # frames
 EVAL_EPISODES = 10
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
-
+UPDATE_ACTOR_EVERY = 
 # Seed the Python and RL environments to replicate similar results across training sessions. 
 
 # 1. Environment
@@ -201,6 +201,7 @@ def train(
             continue
         for _ in range(OPTIM_STEPS):
             td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
+            update_step += 1
             
             # #New Ordering
             # # single forward pass, reuse loss_out
@@ -249,6 +250,21 @@ def train(
             loss_pi.backward()
             optim_actor.step()
             for p in critic.parameters(): p.requires_grad = True
+            
+                # === Delayed actor update ===
+            if update_step % UPDATE_ACTOR_EVERY == 0:
+                for p in critic.parameters():
+                    p.requires_grad = False
+                optim_actor.zero_grad(set_to_none=True)
+                loss_pi = loss_out["loss_actor"]
+                loss_pi.backward()
+                torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)
+                optim_actor.step()
+                for p in critic.parameters():
+                    p.requires_grad = True
+
+                # === Soft update targets only when actor is updated ===
+                updater.step()
             
             
             
