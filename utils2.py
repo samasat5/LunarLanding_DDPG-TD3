@@ -38,6 +38,7 @@ def evaluate_mc_bias(loss,
             ep_obs.append(td_in["observation"])
             ep_act.append(td_pi["action"])
 
+            pdb.set_trace()
             # Step env
             td = eval_env.step(td_pi)
             ep_rew.append(td["next", "reward"].item())
@@ -45,7 +46,6 @@ def evaluate_mc_bias(loss,
             if td["next", "done"].item():
                 break
 
-        pdb.set_trace()
         # Compute Monte-Carlo returns G_t backward
         G = []
         g = 0.0
