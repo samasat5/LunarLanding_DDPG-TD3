@@ -33,7 +33,7 @@ on LunarLanderContinuous-v3 environment.
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 20_000
+TOTAL_FRAMES = 10_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -344,7 +344,7 @@ def train(
     window = 200  # adjust for smoothing strength
     smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
     plt.figure(figsize=(12,5))
-    plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
+    plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
     plt.title(f"Training {method} - TD Bias")
     plt.title(f"Training {method} - Bias")
@@ -353,12 +353,20 @@ def train(
 
     smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     plt.figure(figsize=(12,5))
-    plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
+    plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
     plt.title(f"Training {method} - smoothed Q Values")
     plt.xlabel("Training Steps")
     plt.show()
     
+    plt.figure(figsize=(10,4))
+    plt.plot(eval_steps, eval_rewards, label="Eval reward")
+    plt.xlabel("Environment steps")
+    plt.ylabel("Average return (over eval episodes)")
+    plt.title("TD3 – Evaluation Reward")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.show()
 
 
 
