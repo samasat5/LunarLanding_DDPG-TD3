@@ -45,7 +45,7 @@ GAMMA = 0.99
 EVAL_EVERY = 10_000   # frames
 EVAL_EPISODES = 10
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
-UPDATE_ACTOR_EVERY = 2
+UPDATE_ACTOR_EVERY = 3
 # Seed the Python and RL environments to replicate similar results across training sessions. 
 
 # 1. Environment
@@ -98,19 +98,13 @@ rollout_policy = Seq(actor, tanh_on_action, exploration_module)      # stochasti
 
 
 # 3. Critic (action value function)
-critic_mlp1 = MLP(
+critic_mlp = MLP(
     out_features=1, 
     num_cells=[MLP_SIZE, MLP_SIZE],
     activation_class=nn.ReLU,
     activate_last_layer=False)
-critic1 = TDM(critic_mlp1, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
+critic = TDM(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
 
-critic_mlp2 = MLP(
-    out_features=1, 
-    num_cells=[MLP_SIZE, MLP_SIZE],
-    activation_class=nn.ReLU,
-    activate_last_layer=False)
-critic2 = TDM(critic_mlp2, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
 
 # 4.  loss module
 # --- 4) Warm-up forward to initialize lazy modules BEFORE loss/opt
@@ -119,15 +113,12 @@ with torch.no_grad():
     _ = policy(td0.clone())    # init actor
     td1 = td0.clone()
     td1["action"] = env.action_spec.rand(td1.batch_size)
-    _ = critic1(td1)            # init critic
-    _ = critic2(td1)            # init critic
-    # _ = actor_target(td0.clone())     # init target actor
-    # _ = critic_target(td1.clone())    # init target critic
+    _ = critic(td1)            # init critic
 
 
 loss_td3 = TD3Loss(
     actor_network=policy, # deterministic 
-    qvalue_network=[critic1, critic2],
+    qvalue_network=critic,
     loss_function="l2",
     action_spec=env.action_spec,
     delay_actor=True, # for more stability, Default is False
@@ -158,8 +149,9 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 )
 
 # 7. Optimizers
-optim_actor = optim.Adam(policy.parameters(), lr=3e-4, weight_decay=0.0)
-optim_critic = Adam(list(critic1.parameters()) + list(critic2.parameters()), lr=3e-3)
+optim_actor = optim.Adam(policy.parameters(), lr=3e-4)
+optim_critic = optim.Adam(critic.parameters(), lr=3e-4)
+
 
 
 def train(
@@ -217,15 +209,14 @@ def train(
 
             if method == "TD3":
                 if update_step % UPDATE_ACTOR_EVERY == 0:
-                    for p in critic1.parameters(): p.requires_grad = False
-                    for p in critic2.parameters(): p.requires_grad = False
+                    for p in critic.parameters(): p.requires_grad = False
                     optim_actor.zero_grad(set_to_none=True)
                     loss_pi = loss_out["loss_actor"]
                     loss_pi.backward()
                     torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)
                     optim_actor.step()
-                    for p in critic1.parameters(): p.requires_grad = True
-                    for p in critic2.parameters(): p.requires_grad = True
+                    for p in critic.parameters(): p.requires_grad = True
+               
 
                     # === Soft update targets only when actor is updated ===
                     updater.step()
