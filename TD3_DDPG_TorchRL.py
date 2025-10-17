@@ -362,9 +362,9 @@ def train(
     
     smooth_returns = np.convolve(episode_returns, np.ones(window)/window, mode='valid')
     plt.figure(figsize=(12,4))
-    plt.xtitle(f"{method} – episodic return")
     plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
+    plt.xtitle(f"{method} – episodic return")
     plt.title(f"{method} – episodic return")
     plt.xlabel("Episode")
     plt.ylabel("Return")
