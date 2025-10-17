@@ -183,7 +183,7 @@ def train(
     batch_size=REPLAY_BUFFER_SAMPLE,
 ):
     
-    updater = SoftUpdate(loss, tau=TAU)
+    updater = SoftUpdate(loss, eps=TAU)
     loss.make_value_estimator(gamma=GAMMA)
     total_count = 0
     total_episodes = 0
