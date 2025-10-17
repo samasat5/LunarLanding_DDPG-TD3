@@ -189,6 +189,7 @@ def train(
     biases = []
     eval_rewards = []       
     eval_steps = []
+    update_step = 0
 
 
     pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True) if method=="DDPG" else tqdm(total=TOTAL_FRAMES, desc="Training TD3", dynamic_ncols=True)
