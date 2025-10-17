@@ -27,13 +27,13 @@ def evaluate_mc_bias(loss,
 
         # rollout with deterministic policy
         while True:
-            pdb.set_trace()
            
             td_in = td.select("observation")
             td_pi = actor(td_in.clone()) # gives action and observation
             td_env = td.clone()
             td_env.set("action", td_pi["action"])
             td = eval_env.step(td_env)
+            pdb.set_trace()
 
     
             ep_obs.append(td_in["observation"])
