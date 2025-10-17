@@ -3,6 +3,7 @@ import torch.nn as nn
 from torchrl.objectives import SoftUpdate
 from tensordict import TensorDict
 import numpy as np
+import pdb  
 
 @torch.no_grad()
 def evaluate_mc_bias(loss, 
@@ -26,6 +27,7 @@ def evaluate_mc_bias(loss,
 
         # rollout with deterministic policy
         while True:
+            pdb.set_trace()
            
             td_in = td.select("observation")
             td_pi = actor(td_in.clone())
