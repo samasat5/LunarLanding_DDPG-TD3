@@ -207,6 +207,12 @@ def train(
     pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True) if method=="DDPG" else tqdm(total=TOTAL_FRAMES, desc="Training TD3", dynamic_ncols=True)
     for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
         replay_buffer.extend(data) # add data to the replay buffer
+        
+        frames_in_batch = data.batch_size[0] 
+        env_steps += frames_in_batch
+        since_eval += frames_in_batch
+        episodes += data.get(("next","done")).sum().item()
+        
         max_length = replay_buffer[:]["next", "step_count"].max()
         # pdb.set_trace()
         if len(replay_buffer) <= INIT_RAND_STEPS: 
