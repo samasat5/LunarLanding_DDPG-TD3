@@ -138,19 +138,15 @@ critic2 = TDM(
 )
 
 
+
 loss = TD3Loss(
-    actor_network=policy,
-    qvalue_network=[critic1, critic2],  # explicit twins
-    num_qvalue_nets=2,
+    actor_network=actor_for_loss,  #TODO
+    qvalue_network=critic_net,
     action_spec=env.action_spec,
     loss_function="l2",
     delay_actor=True,
     delay_qvalue=True,
 )
-
-from itertools import chain
-optim_critic = optim.Adam(chain(critic1.parameters(), critic2.parameters()), lr=1e-3)
-
 
 updater = SoftUpdate(loss, tau=TAU)
         
