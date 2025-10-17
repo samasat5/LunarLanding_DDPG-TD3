@@ -209,17 +209,9 @@ def train(
 
         max_length = replay_buffer[:]["next", "step_count"].max()
         
-        # update weights of the inference policy
-        collector.update_policy_weights_()
-        if r0 is None:
-            r0 = tensordict["next", "reward"].mean().item()
-        # extend the replay buffer with the new data
-        current_frames = tensordict.numel()
-        collected_frames += current_frames
         replay_buffer.extend(data) # add data to the replay buffer
         
-    
-        # pdb.set_trace()
+ 
         if len(replay_buffer) <= INIT_RAND_STEPS: 
             pbar.update(data.numel())
             continue
@@ -311,21 +303,7 @@ def train(
             qvalues.append(loss_out["pred_value"].mean().item()) 
 
         rewards.append((i,td["next", "reward"].mean().item(),))
-        if len(rewards_eval) >= INIT_RAND_STEPS:
-            target_value = loss_out
-            loss_value = loss_out["loss_value"].item()
-            loss_actor = loss_dict["loss_actor"].item()
-            rn = sampled_tensordict["next", "reward"].mean().item()
-            rs = sampled_tensordict["next", "reward"].std().item()
-            pbar.set_description(
-                f"reward: {rewards[-1][1]: 4.2f} (r0 = {r0: 4.2f}), "
-                f"reward eval: reward: {rewards_eval[-1][1]: 4.2f}, "
-                f"reward normalized={rn :4.2f}/{rs :4.2f}, "
-                f"grad norm={gn: 4.2f}, "
-                f"loss_value={loss_value: 4.2f}, "
-                f"loss_actor={loss_actor: 4.2f}, "
-                f"target value: {target_value: 4.2f}"
-            )
+        
         success_steps.append(max_length)
         total_count += data.numel()
         total_episodes += data["next", "done"].sum().item()
