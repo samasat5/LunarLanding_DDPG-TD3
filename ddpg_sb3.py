@@ -31,11 +31,7 @@ DEVICE = "auto"
 
 
 env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=0)
-env = VecNormalize(env, norm_obs=True, norm_reward=True)
 eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
-eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False) # do not normalize rewards for eval env
-
-eval_env.obs_rms = env.obs_rms # That copies the mean and variance of observations learned by the training env, so your evaluation uses the same normalization scale.
 
 # The noise objects for DDPG
 n_actions = env.action_space.shape[-1]
@@ -79,7 +75,7 @@ model = DDPG(
     train_freq=FRAMES_PER_BATCH,
     gradient_steps=OPTIM_STEPS,
     learning_starts=INIT_RAND_STEPS,
-    policy_kwargs=dict(net_arch=dict(pi=[400, 300], qf=[400, 300])), # Note that for DDPG/TD3, the default architecture is [400, 300]
+    policy_kwargs=dict(net_arch=dict(pi=[400,300], qf=[400,300])), # Note that for DDPG/TD3, the default architecture is [400, 300]
 )
 model.set_logger(logger)
 model.learn(

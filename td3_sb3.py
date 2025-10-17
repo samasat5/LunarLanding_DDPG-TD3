@@ -16,7 +16,7 @@ from utils_sb3 import QBiasLoggerTD3, plot_stats_td3
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5_000 
-TOTAL_FRAMES = 1_00_000 # 1_000_000
+TOTAL_FRAMES = 1_000_000 # 1_000_000
 FRAMES_PER_BATCH = 100 # train freq
 OPTIM_STEPS =  10 # gradient steps
 BUFFER_LEN = 1_000_000
@@ -31,12 +31,7 @@ DEVICE = "auto"
 
 
 env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=0)
-env = VecNormalize(env, norm_obs=True, norm_reward=True)
 eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
-eval_env = VecNormalize(eval_env, norm_obs=True, norm_reward=False, training=False) # do not normalize rewards for eval env
-
-eval_env.obs_rms = env.obs_rms
-# That copies the mean and variance of observations learned by the training env, so your evaluation uses the same normalization scale.
 
 # The noise objects for TD3
 n_actions = env.action_space.shape[-1]

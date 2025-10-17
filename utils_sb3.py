@@ -96,7 +96,7 @@ class QBiasLoggerDDPG(BaseCallback):
         return True
 
 
-def plot_stats_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv", reward_csv="./logs_ddpg/stats/reward_log.csv"):
+def plot_stats_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv"):
     """
     Read the q-bias CSV saved by QBiasLoggerDDPG and plot the mean, |mean| and std.
 
@@ -118,9 +118,9 @@ def plot_stats_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv", reward_csv="./lo
 
     plt.figure(figsize=(7, 4))
     plt.plot(timesteps, mean_bias, label="mean(Q - target)")
-    plt.fill_between(timesteps, mean_bias - std_bias, mean_bias + std_bias, alpha=0.2, label="±1 std")
-    plt.plot(timesteps, mean_abs, label="mean |Q - target|")
-    plt.fill_between(timesteps, mean_abs - std_abs, mean_abs + std_abs, alpha=0.2, label="±1 std")
+    plt.fill_between(timesteps, mean_bias - std_bias, mean_bias + std_bias, alpha=0.2, label="std")
+    # plt.plot(timesteps, mean_abs, label="mean |Q - target|")
+    # plt.fill_between(timesteps, mean_abs - std_abs, mean_abs + std_abs, alpha=0.2, label="std")
     plt.xlabel("Timesteps")
     plt.ylabel("Q-bias value")
     plt.title("DDPG Q-bias vs Timesteps")
@@ -133,7 +133,7 @@ def plot_stats_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv", reward_csv="./lo
 
     plt.figure(figsize=(7, 4))
     plt.plot(timesteps, mean_q, label="mean Q-values")
-    plt.fill_between(timesteps, mean_q - std_q, mean_q + std_q, alpha=0.2, label="±1 std")
+    plt.fill_between(timesteps, mean_q - std_q, mean_q + std_q, alpha=0.2, label="std")
     plt.xlabel("Timesteps")
     plt.ylabel("Q-value")
     plt.title("DDPG Q-value vs Timesteps")
@@ -147,7 +147,7 @@ def plot_stats_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv", reward_csv="./lo
 
     plt.figure(figsize=(7, 4))
     plt.plot(timesteps, mean_target, label="mean Target")
-    plt.fill_between(timesteps, mean_target - std_target, mean_target + std_target, alpha=0.2, label="±1 std")
+    plt.fill_between(timesteps, mean_target - std_target, mean_target + std_target, alpha=0.2, label="std")
     plt.xlabel("Timesteps")
     plt.ylabel("Target Value")
     plt.title("DDPG Target Value vs Timesteps")
@@ -183,7 +183,7 @@ def plot_stats_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv", reward_csv="./lo
     std_lengths = np.array([np.std(l) for l in ep_lengths])
     plt.figure(figsize=(7, 4))
     plt.plot(timesteps, reward_mean, label="Reward")
-    plt.fill_between(timesteps, reward_mean - reward_std, reward_mean + reward_std, alpha=0.2, label="±1 std (seeds)")
+    plt.fill_between(timesteps, reward_mean - reward_std, reward_mean + reward_std, alpha=0.2, label="std")
     # plt.plot(timesteps, mean_lengths, label="Reward Episode Length")
     # plt.fill_between(timesteps, mean_lengths- std_lengths, mean_lengths+ std_lengths, alpha=0.2, label="±1 std (seeds)")
     plt.xlabel("Timesteps")
@@ -345,7 +345,7 @@ class QBiasLoggerTD3(BaseCallback):
         return True
     
 
-def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", save_path=None):
+def plot_stats_td3(csv_path="./runs/td3_eval", save_path=None):
     """
     Read the TD3 q-bias CSV saved by QBiasLoggerTD3 and plot the mean, |mean|, std,
     and overestimation gap for both critics.
@@ -364,26 +364,26 @@ def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", save_path=None):
 
     # Plot both critics’ mean biases
     plt.plot(t, data["q1_mean"], label="Q1 mean bias")
-    plt.fill_between(t, data["q1_mean"] - data["q1_std"], data["q1_mean"] + data["q1_std"], alpha=0.2, label="±1 std (batch)")
+    plt.fill_between(t, data["q1_mean"] - data["q1_std"], data["q1_mean"] + data["q1_std"], alpha=0.2, label="std (batch)")
     plt.plot(t, data["q2_mean"], label="Q2 mean bias")
-    plt.fill_between(t, data["q2_mean"] - data["q2_std"], data["q2_mean"] + data["q2_std"], alpha=0.2, label="±1 std (batch)")
+    plt.fill_between(t, data["q2_mean"] - data["q2_std"], data["q2_mean"] + data["q2_std"], alpha=0.2, label="std (batch)")
     plt.plot(t, data["min_mean"], label="min(Q1, Q2) mean bias")
-    plt.fill_between(t, data["min_mean"] - data["min_std"], data["min_mean"] + data["min_std"], alpha=0.2, label="±1 std (batch)")
+    plt.fill_between(t, data["min_mean"] - data["min_std"], data["min_mean"] + data["min_std"], alpha=0.2, label="std (batch)")
 
     # Plot abs bias as dashed lines
     plt.plot(t, data["q1_mean_abs"], "--", label="Q1 mean |bias|")
-    plt.fill_between(t, data["q1_mean_abs"] - data["q1_std_abs"], data["q1_mean_abs"] + data["q1_std_abs"], alpha=0.2, label="±1 std (batch)")
+    plt.fill_between(t, data["q1_mean_abs"] - data["q1_std_abs"], data["q1_mean_abs"] + data["q1_std_abs"], alpha=0.2, label="std (batch)")
     plt.plot(t, data["q2_mean_abs"], "--", label="Q2 mean |bias|")
-    plt.fill_between(t, data["q2_mean_abs"] - data["q2_std_abs"], data["q2_mean_abs"] + data["q2_std_abs"], alpha=0.2, label="±1 std (batch)")
+    plt.fill_between(t, data["q2_mean_abs"] - data["q2_std_abs"], data["q2_mean_abs"] + data["q2_std_abs"], alpha=0.2, label="std (batch)")
     plt.plot(t, data["min_mean_abs"], "--", label="min(Q1,Q2) mean |bias|")
-    plt.fill_between(t, data["min_mean_abs"] - data["min_std_abs"], data["min_mean_abs"] + data["min_std_abs"], alpha=0.2, label="±1 std (batch)")
+    plt.fill_between(t, data["min_mean_abs"] - data["min_std_abs"], data["min_mean_abs"] + data["min_std_abs"], alpha=0.2, label="std (batch)")
 
 
     # Plot the overestimation gap
     if "overestimation_gap_mean_abs" in data.dtype.names:
         plt.plot(t, data["overestimation_gap_mean_abs"], ":", color="black",
                  label="|Q1 - Q2| (mean abs gap)")
-        plt.fill_between(t, data["overestimation_gap_mean_abs"] - data["overestimation_gap_std_abs"], data["overestimation_gap_mean_abs"] + data["overestimation_gap_std_abs"], alpha=0.2, label="±1 std (batch)")
+        plt.fill_between(t, data["overestimation_gap_mean_abs"] - data["overestimation_gap_std_abs"], data["overestimation_gap_mean_abs"] + data["overestimation_gap_std_abs"], alpha=0.2, label="std (batch)")
 
     plt.xlabel("Timesteps")
     plt.ylabel("Bias value")
@@ -422,7 +422,7 @@ def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", save_path=None):
     plt.tight_layout(); plt.savefig(p3, dpi=200); plt.close()
 
 
-    data = np.load("./td3_eval/evaluations.npz", allow_pickle=True)
+    data = np.load("./runs/td3_eval/evaluations.npz", allow_pickle=True)
     # arrays of shape (num_evals, variable-length lists)
     timesteps = data["timesteps"]
     results = data["results"]        # list of lists of rewards
@@ -433,12 +433,12 @@ def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", save_path=None):
     std_lengths = np.array([np.std(l) for l in ep_lengths])
     plt.figure(figsize=(7, 4))
     plt.plot(timesteps, reward_mean, label="Reward")
-    plt.fill_between(timesteps, reward_mean - reward_std, reward_mean + reward_std, alpha=0.2, label="±1 std (batch)")
+    plt.fill_between(timesteps, reward_mean - reward_std, reward_mean + reward_std, alpha=0.2, label="std (batch)")
     # plt.plot(timesteps, mean_lengths, label="Reward Episode Length")
     # plt.fill_between(timesteps, mean_lengths- std_lengths, mean_lengths+ std_lengths, alpha=0.2, label="±1 std (seeds)")
     plt.xlabel("Timesteps")
     plt.ylabel("Reward")
-    plt.title("DDPG Reward vs Timesteps")
+    plt.title("TD3 Reward vs Timesteps")
     plt.grid(True, alpha=0.3)
     plt.legend()
     save_path = os.path.join(os.path.dirname(csv_path), "rewards_plot.png")
@@ -451,5 +451,5 @@ def plot_stats_td3(csv_path="./logs_td3/stats/stats_log.csv", save_path=None):
 
 
 if __name__ == "__main__":
-    plot_stats_td3()
-    #plot_stats_ddpg()
+    #plot_stats_td3()
+    plot_stats_ddpg()
