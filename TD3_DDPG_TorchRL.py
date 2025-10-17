@@ -33,7 +33,7 @@ on LunarLanderContinuous-v3 environment.
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 300_000
+TOTAL_FRAMES = 10_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -206,7 +206,8 @@ def train(
     update_step = 0
     rewards, rewards_eval = [], []
     qvalue1, qvalue2 = [], []
-    r0 = None
+    episode_returns = []
+    ep_return = 0.0
     
 
     optim_actor = Adam(loss.actor_network_params.values(True, True),  lr=3e-4)
@@ -220,6 +221,16 @@ def train(
     for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
 
         replay_buffer.extend(data) # add data to the replay buffer
+        # episodic return 
+        rs = data["next", "reward"].cpu().numpy().reshape(-1)
+        ds = data["next", "done"].cpu().numpy().reshape(-1)
+        for r, d in zip(rs, ds):
+            ep_return += float(r)
+            if d:                      # episode ended
+                episode_returns.append(ep_return)
+                ep_return = 0.0
+
+
         max_length = replay_buffer[:]["next", "step_count"].max()
         
         
@@ -349,8 +360,17 @@ def train(
     smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
     smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     
-    save_series("biases.csv", biases, smooth_bias, window)
-    save_series("qvalues.csv", qvalues, smooth_qvalue, window)
+    save_series("biases_newtd3.csv", biases, smooth_bias, window)
+    save_series("qvalues_newtd3.csv", qvalues, smooth_qvalue, window)
+        
+    plt.figure(figsize=(12,4))
+    plt.plot(episode_returns)
+    plt.title(f"{method} – episodic return")
+    plt.xlabel("Episode")
+    plt.ylabel("Return")
+    plt.tight_layout()
+    plt.show()
+    
     
     plt.figure(figsize=(12,5))
     plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
