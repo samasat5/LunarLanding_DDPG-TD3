@@ -33,7 +33,7 @@ on LunarLanderContinuous-v3 environment.
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 200_000
+TOTAL_FRAMES = 300_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -45,9 +45,20 @@ GAMMA = 0.99
 EVAL_EVERY = 10_000   # frames
 EVAL_EPISODES = 10
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
-
+UPDATE_ACTOR_EVERY = 2
 # Seed the Python and RL environments to replicate similar results across training sessions. 
 
+
+def save_series(fname, raw, smooth, window):
+    sm_padded = np.concatenate([np.full(window-1, np.nan), smooth])
+    data = np.column_stack([np.arange(len(raw)), raw, sm_padded])
+    np.savetxt(
+        fname, data, delimiter=",",
+        header="step,raw,smoothed", comments=""
+    )
+    
+    
+    
 # 1. Environment
 env = TransformedEnv(
     GymEnv("LunarLanderContinuous-v3"),
@@ -105,9 +116,9 @@ critic_mlp = MLP(
     activate_last_layer=False)
 critic = TDM(critic_mlp, in_keys=["observation", "action"], out_keys=["state_action_value"]) # = QValue
 
-# Target Networks
-actor_target = deepcopy(actor) 
-critic_target = deepcopy(critic)
+# # Target Networks
+# actor_target = deepcopy(actor) 
+# critic_target = deepcopy(critic)
 
 # 4.  loss module
 # --- 4) Warm-up forward to initialize lazy modules BEFORE loss/opt
@@ -117,8 +128,8 @@ with torch.no_grad():
     td1 = td0.clone()
     td1["action"] = env.action_spec.rand(td1.batch_size)
     _ = critic(td1)            # init critic
-    _ = actor_target(td0.clone())     # init target actor
-    _ = critic_target(td1.clone())    # init target critic
+    # _ = actor_target(td0.clone())     # init target actor
+    # _ = critic_target(td1.clone())    # init target critic
 
 loss_ddpg = DDPGLoss(
     actor_network=policy, # deterministic 
@@ -132,6 +143,7 @@ loss_td3 = TD3Loss(
     qvalue_network=critic,
     loss_function="l2",
     action_spec=env.action_spec,
+    num_qvalue_nets=2 ,
     delay_actor=True, # for more stability, Default is False
     delay_qvalue=True, # for more stability, Default is True
 )
@@ -160,8 +172,10 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 )
 
 # 7. Optimizers
-optim_actor = optim.Adam(policy.parameters(), lr=1e-4, weight_decay=0.0)
-optim_critic = optim.Adam(critic.parameters(), lr=1e-3, weight_decay=1e-2)
+# optim_actor = optim.Adam(policy.parameters(), lr=3e-4, weight_decay=0.0)
+# optim_critic = optim.Adam(critic.parameters(), lr=3e-3, weight_decay=0)
+optim_actor = Adam(loss_td3.actor_network_params.parameters(),  lr=3e-4)
+optim_critic = Adam(loss_td3.qvalue_network_params.parameters(), lr=3e-4)
 
 
 def train(
@@ -189,66 +203,108 @@ def train(
     biases = []
     eval_rewards = []       
     eval_steps = []
+    update_step = 0
+    rewards, rewards_eval = [], []
+    qvalue1, qvalue2 = [], []
+    episode_returns = []
+    ep_return = 0.0
+    
 
-
+    optim_actor = Adam(loss.actor_network_params.values(True, True),  lr=2e-4)
+    
+    if method == "TD3":
+        optim_critic = Adam(loss.qvalue_network_params.values(True, True), lr=2e-4)
+    else:
+        optim_critic = Adam(loss.value_network_params.values(True, True), lr=2e-4)
+        
     pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True) if method=="DDPG" else tqdm(total=TOTAL_FRAMES, desc="Training TD3", dynamic_ncols=True)
     for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
+
         replay_buffer.extend(data) # add data to the replay buffer
+        # episodic return 
+        rs = data["next", "reward"].cpu().numpy().reshape(-1)
+        ds = data["next", "done"].cpu().numpy().reshape(-1)
+        for r, d in zip(rs, ds):
+            ep_return += float(r)
+            if d:                      # episode ended
+                episode_returns.append(ep_return)
+                ep_return = 0.0
+
+
         max_length = replay_buffer[:]["next", "step_count"].max()
-        # pdb.set_trace()
+        
+        
+ 
         if len(replay_buffer) <= INIT_RAND_STEPS: 
             pbar.update(data.numel())
             continue
         for _ in range(OPTIM_STEPS):
             td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
+            update_step += 1
             
-            #New Ordering
-            # single forward pass, reuse loss_out
-            loss_out = loss(td)
-            # === Actor update 
-            for p in critic.parameters(): p.requires_grad = False
-            optim_actor.zero_grad(set_to_none=True)
-            loss_pi = loss_out["loss_actor"]        # from the same forward pass
-            loss_pi.backward()
-            torch.nn.utils.clip_grad_norm_(policy.parameters(), 1.0)  # or policy.parameters() / policy param accessor
-            optim_actor.step()
-            optim_actor.zero_grad(set_to_none=True)
-            for p in critic.parameters():
-                p.requires_grad = True
-            # === Critic update ===
-            optim_critic.zero_grad(set_to_none=True)
-            loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
-            loss_q.backward()
-            torch.nn.utils.clip_grad_norm_(critic.parameters(), 1.0)
-            optim_critic.step()
-            # === Update targets after both updates ===
-            updater.step()
-            
-    
-
-            
-            
-            
+            # #New Ordering
+            # # single forward pass, reuse loss_out
             # loss_out = loss(td)
-            # loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
-            
-            # # Critic update
-            # optim_critic.zero_grad(set_to_none=True)
-            # loss_q.backward()
-            # optim_critic.step()
-            # updater.step()
-
-            # # Recompute loss_out so actor loss uses the updated critic params
-            # loss_out = loss(td)
-            
-
-            # # Actor update
+            # # === Actor update 
             # for p in critic.parameters(): p.requires_grad = False
             # optim_actor.zero_grad(set_to_none=True)
-            # loss_pi = loss_out["loss_actor"]
+            # loss_pi = loss_out["loss_actor"]        # from the same forward pass
             # loss_pi.backward()
+            # torch.nn.utils.clip_grad_norm_(loss.actor_network_params.values(True, True), 1.0)  # or policy.parameters() / policy param accessor
             # optim_actor.step()
-            # for p in critic.parameters(): p.requires_grad = True
+            # optim_actor.zero_grad(set_to_none=True)
+            # for p in critic.parameters():
+            #     p.requires_grad = True
+            # # === Critic update ===
+            # optim_critic.zero_grad(set_to_none=True)
+            # loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
+            # loss_q.backward()
+            # torch.nn.utils.clip_grad_norm_(loss.value_network_params.values(True, True), 1.0) if method == "DDPG" else torch.nn.utils.clip_grad_norm_(loss.qvalue_network_params.values(True, True), 1.0)
+            #  # or critic.parameters() / critic param accessor
+            # optim_critic.step()
+            # # === Update targets after both updates ===
+            # updater.step()
+            
+        
+
+            
+            loss_out = loss(td)
+            loss_q = loss_out["loss_qvalue"] if method == "TD3" else loss_out["loss_value"]
+            
+            # Critic update
+            optim_critic.zero_grad(set_to_none=True)
+            loss_q.backward()
+            torch.nn.utils.clip_grad_norm_(loss.value_network_params.values(True, True), 1.0) if method == "DDPG" else torch.nn.utils.clip_grad_norm_(loss.qvalue_network_params.values(True, True), 1.0)
+            optim_critic.step()
+
+            # Recompute loss_out so actor loss uses the updated critic params
+            loss_out = loss(td)
+            
+
+            # Actor update
+            if method == "DDPG":
+                for p in critic.parameters(): p.requires_grad = False
+                optim_actor.zero_grad(set_to_none=True)
+                loss_pi = loss_out["loss_actor"]
+                loss_pi.backward()
+                optim_actor.step()
+                updater.step()
+                for p in critic.parameters(): p.requires_grad = True
+            
+            if method == "TD3":
+                if update_step % UPDATE_ACTOR_EVERY == 0:
+                    for p in critic.parameters(): p.requires_grad = False
+                    optim_actor.zero_grad(set_to_none=True)
+                    loss_pi = loss_out["loss_actor"]
+                    loss_pi.backward()
+                    torch.nn.utils.clip_grad_norm_(loss.actor_network_params.values(True, True), 1.0)
+                    optim_actor.step()
+                    for p in critic.parameters(): p.requires_grad = True
+
+                    # === Soft update targets only when actor is updated ===
+                    updater.step()
+            
+        
         
             # Record TD bias
             if method == "DDPG":
@@ -260,7 +316,7 @@ def train(
                 target_q = loss_out["target_value"]
                 bias_q1 = (pred_q1 - target_q).mean().item()
                 bias_q2 = (pred_q2 - target_q).mean().item()
-                bias_batch = (bias_q1 + bias_q2) / 2
+                bias_batch = min(bias_q1, bias_q2)
             
             biases.append(bias_batch)
 
@@ -269,8 +325,13 @@ def train(
             
             
             qvalues.append(loss_out["pred_value"].mean().item()) 
+            # qvalue1.append(loss_out["pred_value"][0].mean().item())  
+            # qvalue2.append(loss_out["pred_value"][1].mean().item())
+          
 
-
+        rewards.append((i,td["next", "reward"].mean().item(),))
+    
+        
         success_steps.append(max_length)
         total_count += data.numel()
         total_episodes += data["next", "done"].sum().item()
@@ -285,84 +346,54 @@ def train(
         if total_count % LOG_EVERY == 0:
             torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
             # torchrl_logger.info(f"Steps: {total_count}, Episodes: {total_episodes}, Max Ep Len: {max_length}, ReplayBuffer: {len(replay_buffer)}, Q: {torch.tensor(qvalues[-50:]).item():.3f} [END]")
-        if total_count % EVAL_EVERY < FRAMES_PER_BATCH: # A vérifier
-            policy.eval()
-            with torch.no_grad():
-                rewards, lens = [], []
-                for _ in range(EVAL_EPISODES):
-                    td = eval_env.reset()
-                    done = False
-                    episode_reward = 0.0
-                    while not done:
-                        td = policy(td)
-                        td = eval_env.step(td)
-                        episode_reward += td["next", "reward"].item()
-                        done = td["next", "done"].item()
-                        td = td.get("next")
-                    lens.append(int(td.get("step_count",0)))    
-                    rewards.append(episode_reward)
-                mean_reward = sum(rewards) / EVAL_EPISODES
-                eval_rewards.append(mean_reward)
-                eval_steps.append(total_count)
-                torchrl_logger.info(f"Evaluation over {EVAL_EPISODES} episodes: {mean_reward:.2f}")
-            policy.train()
+    
+    
+
 
     pbar.close()
-    t1 = time.time()
+    t1 = time.time()    
     print(f"Training took {t1-t0:.2f}s")
     torchrl_logger.info(
         f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
     )
-    # window = 200  # adjust for smoothing strength
-    # smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
-    # plt.figure(figsize=(12,5))
-    # plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
-    # plt.title(f"Training {method} - TD Bias")
-    # plt.title(f"Training {method} - Bias")
-    # plt.xlabel("Training Steps")
-    # plt.show()
-
-    # smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
-    # plt.figure(figsize=(12,5))
-    # plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.3)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
-    # # plt.title(f"Training {method} - smoothed Q Values")
-    # plt.xlabel("Training Steps")
-    # plt.show()
+    window = 200  # adjust for smoothing strength
+    smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
+    smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     
-    # accumulated_rewards = np.cumsum(eval_rewards)
-
-    # plt.figure(figsize=(10,5))
-    # plt.plot(eval_steps, accumulated_rewards, label=f'Accumulated Evaluation Rewards - {method}', color='tab:green')
-    # plt.xlabel('Training Steps')
-    # plt.ylabel('Accumulated Reward')
-    # plt.title(f'{method} - Accumulated Evaluation Reward')
-    # plt.legend()
-    # plt.grid(True)
-    # plt.show()
+    save_series("biases_newtd3.csv", biases, smooth_bias, window)
+    save_series("qvalues_newtd3.csv", qvalues, smooth_qvalue, window)
     
-    return eval_steps, eval_rewards
+    smooth_returns = np.convolve(episode_returns, np.ones(window)/window, mode='valid')
+    plt.figure(figsize=(12,4))
+    plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
+    plt.title(f"{method} – episodic return")
+    plt.xlabel("Episode")
+    plt.ylabel("Return")
+    plt.tight_layout()
+    plt.show()
+    
+    
+    plt.figure(figsize=(12,5))
+    plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
+    plt.title(f"Training {method} - TD Bias")
+    plt.title(f"Training {method} - Bias")
+    plt.xlabel("Training Steps")
+    plt.show()
+
+    plt.figure(figsize=(12,5))
+    plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
+    plt.title(f"Training {method} - smoothed Q Values")
+    plt.xlabel("Training Steps")
+    plt.show()
 
 
 
-# train(
-#     method="TD3",
-#     loss=loss_td3,
-#     optim_critic=optim_critic,
-#     optim_actor=optim_actor,
-#     replay_buffer=replay_buffer,
-#     collector=collector,
-#     total_frames=TOTAL_FRAMES,
-#     eval_env=eval_env,
-#     eval_episodes=EVAL_EPISODES,
-#     log_every=LOG_EVERY,
-#     eval_every=EVAL_EVERY,
-#     opt_steps=OPTIM_STEPS,
-#     batch_size=REPLAY_BUFFER_SAMPLE,
-# )
-# DDPG training
-ddpg_steps, ddpg_rewards = train(
+
+
+train(
     method="DDPG",
     loss=loss_ddpg,
     optim_critic=optim_critic,
@@ -378,33 +409,3 @@ ddpg_steps, ddpg_rewards = train(
     batch_size=REPLAY_BUFFER_SAMPLE,
 )
 
-# TD3 training
-td3_steps, td3_rewards = train(
-    method="TD3",
-    loss=loss_td3,
-    optim_critic=optim_critic,
-    optim_actor=optim_actor,
-    replay_buffer=replay_buffer,
-    collector=collector,
-    total_frames=TOTAL_FRAMES,
-    eval_env=eval_env,
-    eval_episodes=EVAL_EPISODES,
-    log_every=LOG_EVERY,
-    eval_every=EVAL_EVERY,
-    opt_steps=OPTIM_STEPS,
-    batch_size=REPLAY_BUFFER_SAMPLE,
-)
-
-
-ddpg_accumulated = np.cumsum(ddpg_rewards)
-td3_accumulated  = np.cumsum(td3_rewards)
-
-plt.figure(figsize=(10,5))
-plt.plot(ddpg_steps, ddpg_accumulated, label='DDPG Accumulated Reward', linewidth=2)
-plt.plot(td3_steps, td3_accumulated, label='TD3 Accumulated Reward', linewidth=2)
-plt.xlabel('Training Steps')
-plt.ylabel('Accumulated Reward')
-plt.title('Accumulated Rewards - DDPG vs TD3')
-plt.legend()
-plt.grid(True)
-plt.show()
