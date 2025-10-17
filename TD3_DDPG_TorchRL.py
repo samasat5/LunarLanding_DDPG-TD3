@@ -160,8 +160,8 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 )
 
 # 7. Optimizers
-optim_actor = optim.Adam(policy.parameters(), lr=1e-4, weight_decay=0.0)
-optim_critic = optim.Adam(critic.parameters(), lr=1e-3, weight_decay=1e-2)
+optim_actor = optim.Adam(policy.parameters(), lr=3e-4, weight_decay=0.0)
+optim_critic = optim.Adam(critic.parameters(), lr=3e-3, weight_decay=0)
 
 
 def train(
@@ -262,7 +262,6 @@ def train(
             else:
                 pred_q1, pred_q2 = loss_out["pred_value"] 
                 target_q = loss_out["target_value"]
-                pdb.set_trace()
                 bias_q1 = (pred_q1 - target_q).mean().item()
                 bias_q2 = (pred_q2 - target_q).mean().item()
                 bias_batch = np.mean(bias_q1, bias_q2)
