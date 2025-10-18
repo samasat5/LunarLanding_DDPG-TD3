@@ -313,7 +313,7 @@ def train(
             "Mean Q": f"{torch.tensor(qvalues[-50:]).mean().item():.2f}",
             "Bias": f"{torch.tensor(biases[-50:]).mean().item():.2f}",
         })
-        pdb.set_trace()
+        
         pbar.update(data.numel())
         
             
