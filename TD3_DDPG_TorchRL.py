@@ -339,6 +339,7 @@ def train(
                     obs = td["observation"] if t == 0 else td["next", "observation"]
                     s = td.select("observation")
                     a = actor(s)["action"]
+                    pdb.set_trace()
                     td_in = td.empty_like().set("observation", obs)
                     q = critic(td_in.clone().set("action", a))["state_action_value"].item()
                     traj_q.append(q)
@@ -346,7 +347,7 @@ def train(
                     traj_r.append(float(td["next","reward"]))
                     G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
-                    pdb.set_trace()
+                    
                     done = bool(td.get("done", False))
                     if "terminated" in td.keys(True) or "truncated" in td.keys(True):
                         done = done or bool(td.get("terminated", False)) or bool(td.get("truncated", False))
