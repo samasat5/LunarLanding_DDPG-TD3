@@ -26,7 +26,9 @@ def plot_bias_stats(biases, title="On-policy bias Q - MC G_t"):
     plt.fill_between(k, run_mean-ci, run_mean+ci, alpha=0.2, label="95% CI")
     plt.axhline(0, ls="--", lw=1, label="Zero bias")
     plt.title(title); plt.xlabel("On-policy steps (k)"); plt.ylabel("Q - G_t")
-    plt.legend(); plt.tight_layout(); plt.show()
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
 def plot_q_vs_mc(q_vals, g_t_all, title="Calibration: Q(s,μ) vs MC G_t"):
     if q_vals.size == 0: return
