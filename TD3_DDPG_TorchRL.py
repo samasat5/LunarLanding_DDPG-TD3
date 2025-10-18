@@ -17,7 +17,7 @@ import torch
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
 from torchrl.envs.utils import check_env_specs
-from utils2 import MultiCriticSoftUpdate, soft_update, plot_mc_estimate
+from utils2 import MultiCriticSoftUpdate, soft_update, plot_q_vs_mc, plot_bias_stats, plot_mc_estimate  
 from tqdm import tqdm
 
 
@@ -361,8 +361,8 @@ def train(
                 G_t.reverse()
                 biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
             # print(G)
-            plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI (100 eps)")
-            plot_mc_estimate(biases_all, title="On-policy over-estimation bias Q(s,μ) − MC G_t")
+            plot_bias_stats(returns, title="MC estimate of J(μ) with 95% CI (100 eps)")
+            plot_q_vs_mc(biases_all, title="On-policy over-estimation bias Q(s,μ) − MC G_t")
                 
 
             
