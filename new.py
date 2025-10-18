@@ -493,6 +493,22 @@ rets_td3, biases_td3, succ_td3, q_td3, g_td3 = run_eval(
     eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
 )
 
+
+train(
+    method="DDPG",
+    loss=loss_ddpg,
+    optim_critic=optim_critic,
+    optim_actor=optim_actor,
+    replay_buffer=replay_buffer,
+    collector=collector,
+    total_frames=TOTAL_FRAMES,
+    eval_env=eval_env,
+    eval_episodes=EVAL_EPISODES,
+    log_every=LOG_EVERY,
+    eval_every=EVAL_EVERY,
+    opt_steps=OPTIM_STEPS,
+    batch_size=REPLAY_BUFFER_SAMPLE,
+)
 rets_ddpg, biases_ddpg, succ_ddpg, q_ddpg, g_ddpg = run_eval(
     method="DDPG",
     loss=loss_ddpg,  # points to the same policy/critic modules
@@ -511,8 +527,8 @@ def _smooth(x, w=400):
 plt.figure(figsize=(10,5))
 sb_td3 = _smooth(biases_td3, w=400)
 sb_ddpg = _smooth(biases_ddpg, w=400)
-plt.plot(np.arange(len(sb_td3)), sb_td3, label="TD3 (min Q1,Q2)")
-plt.plot(np.arange(len(sb_ddpg)), sb_ddpg, label="DDPG (single critic)", alpha=0.8)
+plt.plot(np.arange(len(sb_td3)), sb_td3, label="TD3 MC bias")
+plt.plot(np.arange(len(sb_ddpg)), sb_ddpg, label="DDPG MC bias", alpha=0.8)
 plt.axhline(0, ls="--", lw=1, color="gray")
 plt.title("On-policy MC bias: Q − G_t (smoothed)")
 plt.xlabel("On-policy steps (eval)")
