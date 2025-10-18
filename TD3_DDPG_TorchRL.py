@@ -29,7 +29,7 @@ from tqdm import tqdm
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 20_000
+TOTAL_FRAMES = 50_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -321,7 +321,7 @@ def train(
         
         
         if  (frames_since_eval >= EVAL_EVERY) and (
-            total_frames_seen >= 0.95 * TOTAL_FRAMES):
+            total_frames_seen >= 0.99 * TOTAL_FRAMES):
         # if  (frames_since_eval >= EVAL_EVERY) :
             
             frames_since_eval -= EVAL_EVERY
@@ -365,8 +365,8 @@ def train(
                 biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
                 
             # print(G)
-            plot_mc_estimate(returns, title="MC estimate  with 95% CI")
-            plot_bias_stats(biases_all,title="On-policy bias Q - MC G_t")
+            plot_mc_estimate(returns, title="DDPG MC estimate  with 95% CI")
+            plot_bias_stats(biases_all,title="DDPG bias Q - MC G_t")
             # plot_q_vs_mc(biases_all, title=" Q(s,μ) vs MC G_t")
                 
 
@@ -376,55 +376,55 @@ def train(
     torchrl_logger.info(
         f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
     )
-    window = 200  # adjust for smoothing strength
-    smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
-    smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
+    # window = 200  # adjust for smoothing strength
+    # smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
+    # smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     
-    save_series("biases_newtd3.csv", biases, smooth_bias, window)
-    save_series("qvalues_newtd3.csv", qvalues, smooth_qvalue, window)
+    # save_series("biases_newtd3.csv", biases, smooth_bias, window)
+    # save_series("qvalues_newtd3.csv", qvalues, smooth_qvalue, window)
 
-    plt.figure(figsize=(12,5))
-    plt.xtitle(f"Training {method} - Q Values")
-    plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
-    plt.title(f"Training {method} - smoothed Q Values")
-    plt.xlabel("Training Steps")
-    plt.show()
+    # plt.figure(figsize=(12,5))
+    # plt.xtitle(f"Training {method} - Q Values")
+    # plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    # plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
+    # plt.title(f"Training {method} - smoothed Q Values")
+    # plt.xlabel("Training Steps")
+    # plt.show()
     
-    smooth_returns = np.convolve(episode_returns, np.ones(window)/window, mode='valid')
-    plt.figure(figsize=(12,4))
-    plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
-    plt.xtitle(f"{method} – episodic return")
-    plt.title(f"{method} – episodic return")
-    plt.xlabel("Episode")
-    plt.ylabel("Return")
-    plt.tight_layout()
-    plt.show()
+    # smooth_returns = np.convolve(episode_returns, np.ones(window)/window, mode='valid')
+    # plt.figure(figsize=(12,4))
+    # plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    # # plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
+    # plt.xtitle(f"{method} – episodic return")
+    # plt.title(f"{method} – episodic return")
+    # plt.xlabel("Episode")
+    # plt.ylabel("Return")
+    # plt.tight_layout()
+    # plt.show()
     
     
-    plt.figure(figsize=(12,5))
-    plt.xtitle(f"Training {method} - Bias")
-    plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
-    plt.title(f"Training {method} - TD Bias")
-    plt.title(f"Training {method} - Bias")
-    plt.xlabel("Training Steps")
-    plt.show()
+    # plt.figure(figsize=(12,5))
+    # plt.xtitle(f"Training {method} - Bias")
+    # plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    # plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
+    # plt.title(f"Training {method} - TD Bias")
+    # plt.title(f"Training {method} - Bias")
+    # plt.xlabel("Training Steps")
+    # plt.show()
 
-    plt.figure(figsize=(12,5))
-    plt.xtitle(f"Training {method} - Q Values")
-    plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
-    plt.title(f"Training {method} - smoothed Q Values")
-    plt.xlabel("Training Steps")
-    plt.show()
+    # plt.figure(figsize=(12,5))
+    # plt.xtitle(f"Training {method} - Q Values")
+    # plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    # plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
+    # plt.title(f"Training {method} - smoothed Q Values")
+    # plt.xlabel("Training Steps")
+    # plt.show()
 
 
 
 train(
-    method="DDPG",
-    loss=loss_ddpg,
+    method="TD3",
+    loss=loss_td3,
     optim_critic=optim_critic,
     optim_actor=optim_actor,
     replay_buffer=replay_buffer,
