@@ -256,7 +256,8 @@ def train(
 
             # Actor update
             if method == "DDPG":
-                # for p in loss.actor_network_params.values(True, True): p.requires_grad = False
+                for p in critic.parameters(): p.requires_grad = False
+                pdb.set_trace()
                 optim_actor.zero_grad(set_to_none=True)
                 loss_pi = loss_out["loss_actor"]
                 loss_pi.backward()
