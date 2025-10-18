@@ -324,7 +324,7 @@ def train(
                     actor = loss.actor_network
                     s = td.select("observation")
                     a = actor(s)["action"]
-                    
+                    td = eval_env.step(td.clone().set("action", a))
                 
 
             
