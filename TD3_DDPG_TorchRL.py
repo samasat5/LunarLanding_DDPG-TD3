@@ -319,10 +319,10 @@ def train(
         returns, successes = [], 0
         if total_count % eval_every < data.numel():
             actor.eval()
-            for _ in range(eval_episodes): 
+            for _ in range(EVAL_EPISODES): 
                 td = eval_env.reset() 
                 G, gpow = 0.0, 1.0 
-                for _ in range(eval_max_steps=1000): 
+                for _ in range(eval_max_steps =eval_env._max_episode_steps): 
                     actor = loss.actor_network
                     s = td.select("observation")
                     a = actor(s)["action"]
