@@ -329,6 +329,7 @@ def train(
             critic.eval()
             for i in range(EVAL_EPISODES): 
                 td = eval_env.reset() 
+                traj_q, traj_r = [], []
                 G, gpow = 0.0, 1.0 
                 for _ in range(eval_max_steps): 
                     actor = loss.actor_network
