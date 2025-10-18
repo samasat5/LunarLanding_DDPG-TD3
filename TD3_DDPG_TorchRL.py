@@ -29,7 +29,7 @@ from tqdm import tqdm
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 100_000
+TOTAL_FRAMES = 20_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -322,8 +322,10 @@ def train(
         returns, successes = [], 0
         eval_max_steps = eval_env._max_episode_steps
         print(frames_since_eval, total_count , eval_every, data.numel() )
-        if  (frames_since_eval >= EVAL_EVERY) and (
-            total_frames_seen >= 0.9 * TOTAL_FRAMES):
+        # if  (frames_since_eval >= EVAL_EVERY) and (
+        #     total_frames_seen >= 0.9 * TOTAL_FRAMES):
+        if  (frames_since_eval >= EVAL_EVERY) :
+            
             frames_since_eval -= EVAL_EVERY
             actor = loss.actor_network 
             actor.eval()
