@@ -29,7 +29,7 @@ from tqdm import tqdm
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 100_000
+TOTAL_FRAMES = 20_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -461,6 +461,7 @@ def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
             # Q(s,a)
             td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
             q_out = critic_eval(td_q)["state_action_value"]
+            pdb.set_trace()
             if isinstance(q_out, (list, tuple)):
                 q = torch.minimum(q_out[0], q_out[1]).squeeze(-1).item()
             else:
@@ -502,8 +503,8 @@ def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
 
 
 train(
-    method="DDPG",
-    loss=loss_ddpg,
+    method="TD3",
+    loss=loss_td3,
     optim_critic=optim_critic,
     optim_actor=optim_actor,
     replay_buffer=replay_buffer,
