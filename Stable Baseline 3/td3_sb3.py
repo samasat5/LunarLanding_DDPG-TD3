@@ -12,23 +12,9 @@ from stable_baselines3.common.logger import configure
 from stable_baselines3.common.callbacks import EvalCallback, EveryNTimesteps
 from stable_baselines3.common.env_util import make_vec_env  
 from stable_baselines3.common.vec_env import VecNormalize
-from utils_sb3 import PlotLoggerTD3, plot_stats_td3
-
-# parameters and hyperparameters
-INIT_RAND_STEPS = 5_000 
-TOTAL_FRAMES = 1_000_000 # 1_000_000
-FRAMES_PER_BATCH = 100 # train freq
-OPTIM_STEPS =  10 # gradient steps
-BUFFER_LEN = 1_000_000
-REPLAY_BUFFER_SAMPLE = 256 # 128
-LOG_EVERY = 1_000
-MLP_SIZE = 256
-TAU = 0.005
-GAMMA = 0.99
-EVAL_EVERY = 10_000   # frames
-EVAL_EPISODES = 10
-DEVICE = "auto" 
-
+from PlotLogger import PlotLoggerTD3, EvalMCBiasChild
+from utils_sb3 import plot_stats_td3
+from configs import *
 
 env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=0)
 eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
