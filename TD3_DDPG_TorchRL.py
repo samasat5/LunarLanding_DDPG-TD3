@@ -312,13 +312,8 @@ def train(
             "Bias": f"{torch.tensor(biases[-50:]).mean().item():.2f}",
         })
         pbar.update(data.numel())
-
-        # if total_count % LOG_EVERY == 0:
-        #         torchrl_logger.info(f"Successful steps in the last episode: {max_length}, Q: {torch.tensor(qvalues[-50:]).mean().item():.3f}, rb length {len(replay_buffer)}, Number of episodes: {total_episodes}")
         
-        
-        # if (total_count // eval_every) != ((total_count - data.numel()) // eval_every):
-        N = eval_env.batch_size #????\
+            
         returns, successes = [], 0
         eval_max_steps = eval_env._max_episode_steps
         print(frames_since_eval, total_count , eval_every, data.numel() )
