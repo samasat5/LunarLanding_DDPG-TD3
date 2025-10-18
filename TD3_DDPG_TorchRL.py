@@ -331,9 +331,13 @@ def train(
                     td = eval_env.step(td.clone().set("action", a))
                     G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
-                    if bool(td["done"]):
-                        if "success" in td.keys(True) and bool(td["success"]):
-                            success += 1
+                    done = bool(td.get("done", False))
+                    if "terminated" in td.keys(True) or "truncated" in td.keys(True):
+                        done = done or bool(td.get("terminated", False)) or bool(td.get("truncated", False))
+                    # if done:
+                    #     if "success" in td.keys(True) and bool(td.get("success")):
+                    #         successes += 1
+                    #     break
                 pdb.set_trace()
                 print(f"Eval episode nb {i} return: {G}")
                 returns.append(G)
