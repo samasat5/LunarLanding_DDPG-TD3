@@ -43,13 +43,12 @@ def evaluate_mc_bias(loss,
             if td["next", "done"].item():
                 break
 
-        # Compute Monte-Carlo returns G_t backward
         G = []
         g = 0.0
         for r in reversed(ep_rew):
             g = r + gamma * g
             G.append(g)
-        G = list(reversed(G))  # align with timesteps
+        G = list(reversed(G)) 
         obs_batch = torch.stack(ep_obs, 0)
         act_batch = torch.stack(ep_act, 0)
         td_batch = TensorDict(
