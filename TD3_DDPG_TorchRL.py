@@ -315,7 +315,8 @@ def train(
         
         
         # if (total_count // eval_every) != ((total_count - data.numel()) // eval_every):
-        N = eval_env.batch_size #????
+        N = eval_env.batch_size #????\
+        from torchrl.data import step_mdp
         returns, successes = [], 0
         eval_max_steps = eval_env._max_episode_steps
         if total_count % eval_every < data.numel():
