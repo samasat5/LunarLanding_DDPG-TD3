@@ -254,23 +254,23 @@ def train(
 
             # Actor update
             if method == "DDPG":
-                for p in critic.parameters(): p.requires_grad = False
+                for p in loss.value_network_params.values(True, True): p.requires_grad = False
                 optim_actor.zero_grad(set_to_none=True)
                 loss_pi = loss_out["loss_actor"]
                 loss_pi.backward()
                 optim_actor.step()
                 updater.step()
-                for p in critic.parameters(): p.requires_grad = True
+                for p in loss.value_network_params.values(True, True): p.requires_grad = True
             
             if method == "TD3":
                 if update_step % UPDATE_ACTOR_EVERY == 0:
-                    for p in critic.parameters(): p.requires_grad = False
+                    for p in loss.qvalue_network_params.values(True, True): p.requires_grad = False
                     optim_actor.zero_grad(set_to_none=True)
                     loss_pi = loss_out["loss_actor"]
                     loss_pi.backward()
                     # torch.nn.utils.clip_grad_norm_(loss.actor_network_params.values(True, True), 1.0)
                     optim_actor.step()
-                    for p in critic.parameters(): p.requires_grad = True
+                    for p in loss.qvalue_network_params.values(True, True): p.requires_grad = True
 
                     # === Soft update targets only when actor is updated ===
                     updater.step()
@@ -317,7 +317,7 @@ def train(
         returns, successes = [], 0
         eval_max_steps = eval_env._max_episode_steps
         print(frames_since_eval, total_count , eval_every, data.numel() )
-        pdb.set_trace()
+        
         # if  (frames_since_eval >= EVAL_EVERY) and (
         #     total_frames_seen >= 0.9 * TOTAL_FRAMES):
         if  (frames_since_eval >= EVAL_EVERY) :
@@ -332,8 +332,6 @@ def train(
                 traj_q, traj_r, biases_all = [], [], []
                 G, gpow = 0.0, 1.0 
                 for t in range(eval_max_steps): 
-                    
-                    critic = loss.qvalue_network if method == "TD3" else loss.value_network
                     obs = td["observation"] if t == 0 else td["next", "observation"]
                     s = td.select("observation")
                     a = actor_eval(s)["action"]
@@ -345,7 +343,7 @@ def train(
                     G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
                     
-                    
+                    pdb.set_trace()
                     done = bool(td.get("done", False))
                     if "terminated" in td.keys(True) or "truncated" in td.keys(True):
                         done = done or bool(td.get("terminated", False)) or bool(td.get("truncated", False))
