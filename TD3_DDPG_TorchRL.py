@@ -329,7 +329,7 @@ def train(
             critic.eval()
             for i in range(EVAL_EPISODES): 
                 td = eval_env.reset() 
-                traj_q, traj_r = [], []
+                traj_q, traj_r, biases_all = [], [], []
                 G, gpow = 0.0, 1.0 
                 for _ in range(eval_max_steps): 
                     actor = loss.actor_network
@@ -352,8 +352,15 @@ def train(
                 
                 # print(f"Eval episode nb {i} return: {G}")
                 returns.append(G)
+                G_t = []
+                acc = 0.0
+                for r in reversed(traj_r):
+                    acc = r + GAMMA * acc
+                    G_t.append(acc)
+                G_t.reverse()
+                biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
             # print(G)
-            plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI")
+            plot_mc_estimate(returns, biases_all,  title="MC estimate of J(μ) with 95% CI")
                 
 
             
