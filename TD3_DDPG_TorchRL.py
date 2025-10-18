@@ -327,21 +327,22 @@ def train(
         if  (frames_since_eval >= EVAL_EVERY) :
             
             frames_since_eval -= EVAL_EVERY
-            actor = loss.actor_network 
-            actor.eval()
-            critic.eval()
+            actor_eval  = loss.actor_network
+            critic_eval = loss.qvalue_network if method == "TD3" else loss.value_network
+            actor_eval.eval()
+            critic_eval.eval()
             for i in range(EVAL_EPISODES): 
                 td = eval_env.reset() 
                 traj_q, traj_r, biases_all = [], [], []
                 G, gpow = 0.0, 1.0 
                 for t in range(eval_max_steps): 
-                    actor = loss.actor_network
+                    
                     critic = loss.qvalue_network if method == "TD3" else loss.value_network
                     obs = td["observation"] if t == 0 else td["next", "observation"]
                     s = td.select("observation")
-                    a = actor(s)["action"]
+                    a = actor_eval(s)["action"]
                     td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
-                    q = critic(td_q)["state_action_value"]
+                    q = critic_eval(td_q)["state_action_value"]
                     traj_q.append(q)
                     td = eval_env.step(td.clone().set("action", a))
                     traj_r.append(float(td["next","reward"]))
