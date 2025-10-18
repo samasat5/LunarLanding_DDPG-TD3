@@ -214,7 +214,9 @@ def train(
     else:
         optim_critic = Adam(loss.value_network_params.values(True, True), lr=2e-4)
         
+    
     pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True) if method=="DDPG" else tqdm(total=TOTAL_FRAMES, desc="Training TD3", dynamic_ncols=True)
+    
     for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
 
         replay_buffer.extend(data) # add data to the replay buffer
