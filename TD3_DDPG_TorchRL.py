@@ -318,6 +318,7 @@ def train(
         N = eval_env.batch_size #????\
         returns, successes = [], 0
         eval_max_steps = eval_env._max_episode_steps
+        print(total_count , eval_every, data.numel() )
         if total_count % eval_every < data.numel():
             actor = loss.actor_network 
             actor.eval()
@@ -341,6 +342,7 @@ def train(
                 
                 print(f"Eval episode nb {i} return: {G}")
                 returns.append(G)
+            print(G[:10])
         plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI")
                 
 
