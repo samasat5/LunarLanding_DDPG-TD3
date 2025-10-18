@@ -385,11 +385,19 @@ def train(
     
     save_series("biases_newtd3.csv", biases, smooth_bias, window)
     save_series("qvalues_newtd3.csv", qvalues, smooth_qvalue, window)
+
+    plt.figure(figsize=(12,5))
+    plt.xtitle(f"Training {method} - Q Values")
+    plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
+    plt.title(f"Training {method} - smoothed Q Values")
+    plt.xlabel("Training Steps")
+    plt.show()
     
     smooth_returns = np.convolve(episode_returns, np.ones(window)/window, mode='valid')
     plt.figure(figsize=(12,4))
     plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
+    # plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
     plt.xtitle(f"{method} – episodic return")
     plt.title(f"{method} – episodic return")
     plt.xlabel("Episode")
