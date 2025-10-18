@@ -318,54 +318,54 @@ def train(
         eval_max_steps = eval_env._max_episode_steps
         
         
-        if  (frames_since_eval >= EVAL_EVERY) and (
-            total_frames_seen >= 0.95 * TOTAL_FRAMES):
-        # if  (frames_since_eval >= EVAL_EVERY) :
+        # if  (frames_since_eval >= EVAL_EVERY) and (
+        #     total_frames_seen >= 0.95 * TOTAL_FRAMES):
+        # # if  (frames_since_eval >= EVAL_EVERY) :
             
-            frames_since_eval -= EVAL_EVERY
-            actor_eval  = loss.actor_network
-            critic_eval = loss.qvalue_network if method == "TD3" else loss.value_network
-            actor_eval.eval()
-            critic_eval.eval()
-            for i in range(EVAL_EPISODES): 
-                td = eval_env.reset() 
-                traj_q, traj_r, biases_all = [], [], []
-                G, gpow = 0.0, 1.0 
-                for t in range(eval_max_steps): 
-                    obs = td["observation"] if t == 0 else td["next", "observation"]
-                    s = td.select("observation")
-                    a = actor_eval(s)["action"]
-                    td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
-                    q = critic_eval(td_q)["state_action_value"].item()
-                    traj_q.append(q)
-                    td = eval_env.step(td.clone().set("action", a))
-                    traj_r.append(float(td["next","reward"]))
-                    G += gpow * td["next","reward"].item()
-                    gpow *= GAMMA
+        #     frames_since_eval -= EVAL_EVERY
+        #     actor_eval  = loss.actor_network
+        #     critic_eval = loss.qvalue_network if method == "TD3" else loss.value_network
+        #     actor_eval.eval()
+        #     critic_eval.eval()
+        #     for i in range(EVAL_EPISODES): 
+        #         td = eval_env.reset() 
+        #         traj_q, traj_r, biases_all = [], [], []
+        #         G, gpow = 0.0, 1.0 
+        #         for t in range(eval_max_steps): 
+        #             obs = td["observation"] if t == 0 else td["next", "observation"]
+        #             s = td.select("observation")
+        #             a = actor_eval(s)["action"]
+        #             td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
+        #             q = critic_eval(td_q)["state_action_value"].item()
+        #             traj_q.append(q)
+        #             td = eval_env.step(td.clone().set("action", a))
+        #             traj_r.append(float(td["next","reward"]))
+        #             G += gpow * td["next","reward"].item()
+        #             gpow *= GAMMA
                     
                     
-                    done = bool(td.get("done", False))
-                    if "terminated" in td.keys(True) or "truncated" in td.keys(True):
-                        done = done or bool(td.get("terminated", False)) or bool(td.get("truncated", False))
-                    if done:
-                        if "success" in td.keys(True) and bool(td.get("success")):
-                            successes += 1
-                        break
+        #             done = bool(td.get("done", False))
+        #             if "terminated" in td.keys(True) or "truncated" in td.keys(True):
+        #                 done = done or bool(td.get("terminated", False)) or bool(td.get("truncated", False))
+        #             if done:
+        #                 if "success" in td.keys(True) and bool(td.get("success")):
+        #                     successes += 1
+        #                 break
                 
-                # print(f"Eval episode nb {i} return: {G}")
-                returns.append(G)
-                G_t = []
-                acc = 0.0
-                for r in reversed(traj_r):
-                    acc = r + GAMMA * acc
-                    G_t.append(acc)
-                G_t.reverse()
-                biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
+        #         # print(f"Eval episode nb {i} return: {G}")
+        #         returns.append(G)
+        #         G_t = []
+        #         acc = 0.0
+        #         for r in reversed(traj_r):
+        #             acc = r + GAMMA * acc
+        #             G_t.append(acc)
+        #         G_t.reverse()
+        #         biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
                 
-            # print(G)
-            plot_mc_estimate(returns, title="MC estimate  with 95% CI")
-            plot_bias_stats(biases_all,title="On-policy bias Q - MC G_t")
-            # plot_q_vs_mc(biases_all, title=" Q(s,μ) vs MC G_t")
+        #     # print(G)
+        #     plot_mc_estimate(returns, title="MC estimate  with 95% CI")
+        #     plot_bias_stats(biases_all,title="On-policy bias Q - MC G_t")
+        #     # plot_q_vs_mc(biases_all, title=" Q(s,μ) vs MC G_t")
                 
 
             
@@ -379,41 +379,41 @@ def train(
     torchrl_logger.info(
         f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
     )
-    # window = 200  # adjust for smoothing strength
-    # smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
-    # smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
+    window = 200  # adjust for smoothing strength
+    smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
+    smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     
-    # save_series("biases_newtd3.csv", biases, smooth_bias, window)
-    # save_series("qvalues_newtd3.csv", qvalues, smooth_qvalue, window)
+    save_series("biases_newtd3.csv", biases, smooth_bias, window)
+    save_series("qvalues_newtd3.csv", qvalues, smooth_qvalue, window)
     
-    # smooth_returns = np.convolve(episode_returns, np.ones(window)/window, mode='valid')
-    # plt.figure(figsize=(12,4))
-    # plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
-    # plt.xtitle(f"{method} – episodic return")
-    # plt.title(f"{method} – episodic return")
-    # plt.xlabel("Episode")
-    # plt.ylabel("Return")
-    # plt.tight_layout()
-    # plt.show()
+    smooth_returns = np.convolve(episode_returns, np.ones(window)/window, mode='valid')
+    plt.figure(figsize=(12,4))
+    plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
+    plt.xtitle(f"{method} – episodic return")
+    plt.title(f"{method} – episodic return")
+    plt.xlabel("Episode")
+    plt.ylabel("Return")
+    plt.tight_layout()
+    plt.show()
     
     
-    # plt.figure(figsize=(12,5))
-    # plt.xtitle(f"Training {method} - Bias")
-    # plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
-    # plt.title(f"Training {method} - TD Bias")
-    # plt.title(f"Training {method} - Bias")
-    # plt.xlabel("Training Steps")
-    # plt.show()
+    plt.figure(figsize=(12,5))
+    plt.xtitle(f"Training {method} - Bias")
+    plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
+    plt.title(f"Training {method} - TD Bias")
+    plt.title(f"Training {method} - Bias")
+    plt.xlabel("Training Steps")
+    plt.show()
 
-    # plt.figure(figsize=(12,5))
-    # plt.xtitle(f"Training {method} - Q Values")
-    # plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
-    # plt.title(f"Training {method} - smoothed Q Values")
-    # plt.xlabel("Training Steps")
-    # plt.show()
+    plt.figure(figsize=(12,5))
+    plt.xtitle(f"Training {method} - Q Values")
+    plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
+    plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
+    plt.title(f"Training {method} - smoothed Q Values")
+    plt.xlabel("Training Steps")
+    plt.show()
 
 
 
