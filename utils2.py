@@ -4,7 +4,7 @@ from torchrl.objectives import SoftUpdate
 from tensordict import TensorDict
 import numpy as np
 import pdb  
-
+import matplotlib.pyplot as plt
 import math
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,22 +13,26 @@ import matplotlib.pyplot as plt
 
 
 def plot_bias_stats(biases, title="On-policy bias Q - MC G_t"):
-    if biases.size == 0: return
+    import numpy as np
+    biases = np.asarray(biases, dtype=float)  # <-- accept list or array
+    if biases.size == 0:
+        return
     k = np.arange(1, len(biases)+1)
     run_mean = np.cumsum(biases)/k
     diffsq = np.cumsum((biases - run_mean)**2)
-    var = np.zeros_like(run_mean); 
-    if len(biases) >= 2: var[1:] = diffsq[1:] / (k[1:]-1)
+    var = np.zeros_like(run_mean)
+    if len(biases) >= 2:
+        var[1:] = diffsq[1:] / (k[1:]-1)
     ci = 1.96*np.sqrt(var)/np.sqrt(k)
 
+    
     plt.figure(figsize=(7,4))
     plt.plot(k, run_mean, label="Running mean bias")
     plt.fill_between(k, run_mean-ci, run_mean+ci, alpha=0.2, label="95% CI")
     plt.axhline(0, ls="--", lw=1, label="Zero bias")
     plt.title(title); plt.xlabel("On-policy steps (k)"); plt.ylabel("Q - G_t")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    plt.legend(); plt.tight_layout(); plt.show()
+
 
 def plot_q_vs_mc(q_vals, g_t_all, title="Calibration: Q(s,μ) vs MC G_t"):
     if q_vals.size == 0: return
