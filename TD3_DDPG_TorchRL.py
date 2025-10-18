@@ -318,9 +318,9 @@ def train(
         eval_max_steps = eval_env._max_episode_steps
         print(frames_since_eval, total_count , eval_every, data.numel() )
         
-        # if  (frames_since_eval >= EVAL_EVERY) and (
-        #     total_frames_seen >= 0.9 * TOTAL_FRAMES):
-        if  (frames_since_eval >= EVAL_EVERY) :
+        if  (frames_since_eval >= EVAL_EVERY) and (
+            total_frames_seen >= 0.9 * TOTAL_FRAMES):
+        # if  (frames_since_eval >= EVAL_EVERY) :
             
             frames_since_eval -= EVAL_EVERY
             actor_eval  = loss.actor_network
