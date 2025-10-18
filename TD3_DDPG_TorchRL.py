@@ -368,11 +368,6 @@ def train(
         #     # plot_q_vs_mc(biases_all, title=" Q(s,μ) vs MC G_t")
                 
 
-            
-
-        
-
-
     pbar.close()
     t1 = time.time()    
     print(f"Training took {t1-t0:.2f}s")
@@ -424,7 +419,50 @@ def train(
     plt.show()
 
 
-
+def evaluate (loss , method, eval_env, EVAL_EPISODES, GAMMA, EVAL_EVERY, eval_max_steps):
+            actor_eval  = loss.actor_network
+            critic_eval = loss.qvalue_network if method == "TD3" else loss.value_network
+            actor_eval.eval()
+            critic_eval.eval()
+            for i in range(EVAL_EPISODES): 
+                td = eval_env.reset() 
+                traj_q, traj_r, biases_all = [], [], []
+                G, gpow = 0.0, 1.0 
+                for t in range(eval_max_steps): 
+                    obs = td["observation"] if t == 0 else td["next", "observation"]
+                    s = td.select("observation")
+                    a = actor_eval(s)["action"]
+                    td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
+                    q = critic_eval(td_q)["state_action_value"].item()
+                    traj_q.append(q)
+                    td = eval_env.step(td.clone().set("action", a))
+                    traj_r.append(float(td["next","reward"]))
+                    G += gpow * td["next","reward"].item()
+                    gpow *= GAMMA
+                    
+                    
+                    done = bool(td.get("done", False))
+                    if "terminated" in td.keys(True) or "truncated" in td.keys(True):
+                        done = done or bool(td.get("terminated", False)) or bool(td.get("truncated", False))
+                    if done:
+                        if "success" in td.keys(True) and bool(td.get("success")):
+                            successes += 1
+                        break
+                
+                # print(f"Eval episode nb {i} return: {G}")
+                returns.append(G)
+                G_t = []
+                acc = 0.0
+                for r in reversed(traj_r):
+                    acc = r + GAMMA * acc
+                    G_t.append(acc)
+                G_t.reverse()
+                biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
+                
+            # print(G)
+            plot_mc_estimate(returns, title="MC estimate  with 95% CI")
+            plot_bias_stats(biases_all,title="On-policy bias Q - MC G_t")
+            # plot_q_vs_mc(biases_all, title=" Q(s,μ) vs MC G_t")
 
 
 train(
