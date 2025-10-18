@@ -336,6 +336,7 @@ def train(
                 G, gpow = 0.0, 1.0 
                 for t in range(eval_max_steps): 
                     actor = loss.actor_network
+                    critic = loss.qvalue_network if method == "TD3" else loss.value_network
                     obs = td["observation"] if t == 0 else td["next", "observation"]
                     s = td.select("observation")
                     a = actor(s)["action"]
