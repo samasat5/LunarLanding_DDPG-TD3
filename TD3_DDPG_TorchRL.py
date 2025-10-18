@@ -334,6 +334,7 @@ def train(
                     if bool(td["done"]):
                         if "success" in td.keys(True) and bool(td["success"]):
                             success += 1
+                pdb.set_trace()
                 print(f"Eval episode nb {i} return: {G}")
                 returns.append(G)
         plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI")
