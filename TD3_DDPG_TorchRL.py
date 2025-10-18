@@ -318,6 +318,7 @@ def train(
         N = eval_env.batch_size #????
         returns, successes = [], 0
         if total_count % eval_every < data.numel():
+            actor = loss.actor_network 
             actor.eval()
             for _ in range(EVAL_EPISODES): 
                 td = eval_env.reset() 
