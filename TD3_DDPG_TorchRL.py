@@ -321,7 +321,7 @@ def train(
         if total_count % eval_every < data.numel():
             actor = loss.actor_network 
             actor.eval()
-            for _ in range(EVAL_EPISODES): 
+            for i in range(EVAL_EPISODES): 
                 td = eval_env.reset() 
                 G, gpow = 0.0, 1.0 
                 for _ in range(eval_max_steps): 
@@ -334,8 +334,9 @@ def train(
                     if bool(td["done"]):
                         if "success" in td.keys(True) and bool(td["success"]):
                             success += 1
+                print(f"Eval episode nb {i} return: {G}")
                 returns.append(G)
-        
+        plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI")
                 
 
             
