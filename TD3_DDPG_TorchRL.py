@@ -469,8 +469,8 @@ def evaluate (loss , method, eval_env, EVAL_EPISODES, GAMMA, EVAL_EVERY, eval_ma
 
 
 train(
-    method="TD3",
-    loss=loss_td3,
+    method="DDPG",
+    loss=loss_ddpg,
     optim_critic=optim_critic,
     optim_actor=optim_actor,
     replay_buffer=replay_buffer,
