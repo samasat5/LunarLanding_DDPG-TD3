@@ -344,10 +344,10 @@ def train(
                             successes += 1
                         break
                 
-                print(f"Eval episode nb {i} return: {G}")
+                # print(f"Eval episode nb {i} return: {G}")
                 returns.append(G)
-            print(G)
-        plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI")
+            # print(G)
+            plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI")
                 
 
             
