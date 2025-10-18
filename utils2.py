@@ -5,6 +5,36 @@ from tensordict import TensorDict
 import numpy as np
 import pdb  
 
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+
+def plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI"):
+    """returns: list/array of episodic (discounted) returns G_1..G_N"""
+    r = np.asarray(returns, dtype=float)
+    N = len(r)
+    # running mean & CI
+    k = np.arange(1, N+1)
+    running_mean = np.cumsum(r) / k
+    # unbiased running std (nan for k=1 -> replace with 0)
+    diffsq = np.cumsum((r - running_mean)**2)
+    running_var = np.zeros(N)
+    running_var[1:] = diffsq[1:] / (k[1:] - 1)
+    running_std = np.sqrt(running_var)
+    ci95 = 1.96 * running_std / np.sqrt(k)
+    lo = running_mean - ci95
+    hi = running_mean + ci95
+
+    plt.figure(figsize=(7,4))
+    plt.plot(k, running_mean, label="Running mean Ȳₖ")
+    plt.fill_between(k, lo, hi, alpha=0.2, label="95% CI")
+    plt.axhline(running_mean[-1], linestyle="--", linewidth=1, label=f"Final mean = {running_mean[-1]:.2f}")
+    plt.xlabel("Episodes (k)")
+    plt.ylabel("Estimated return")
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
 
 

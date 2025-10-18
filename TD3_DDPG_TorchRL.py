@@ -17,7 +17,7 @@ import torch
 from torch import nn, optim
 from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTracker, ObservationNorm, StepCounter
 from torchrl.envs.utils import check_env_specs
-from utils2 import MultiCriticSoftUpdate, soft_update, evaluate_mc_bias
+from utils2 import MultiCriticSoftUpdate, soft_update, plot_mc_estimate
 from tqdm import tqdm
 
 
