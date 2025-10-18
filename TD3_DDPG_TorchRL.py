@@ -38,7 +38,7 @@ LOG_EVERY = 1000
 MLP_SIZE = 256
 TAU = 0.01
 GAMMA = 0.99
-EVAL_EVERY = 500   # frames
+EVAL_EVERY = 1000   # frames
 EVAL_EPISODES = 10
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 UPDATE_ACTOR_EVERY = 2
@@ -334,14 +334,14 @@ def train(
                     done = bool(td.get("done", False))
                     if "terminated" in td.keys(True) or "truncated" in td.keys(True):
                         done = done or bool(td.get("terminated", False)) or bool(td.get("truncated", False))
-                    # if done:
-                    #     if "success" in td.keys(True) and bool(td.get("success")):
-                    #         successes += 1
-                    #     break
+                    if done:
+                        if "success" in td.keys(True) and bool(td.get("success")):
+                            successes += 1
+                        break
                 
                 print(f"Eval episode nb {i} return: {G}")
                 returns.append(G)
-        # plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI")
+        plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI")
                 
 
             
