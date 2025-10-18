@@ -464,7 +464,7 @@ final_returns, final_biases, final_successes = run_eval(
     eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
 )
 # plot_mc_estimate(final_returns, title="MC estimate with 95% CI (final)")
-plot_bias_stats(final_biases, title="On-policy bias Q - MC G_t (final)")
+plot_bias_stats(final_biases, title="MC bias Q - MC G_t ")
 print(f"[Final Eval] episodes={EVAL_EPISODES} mean_return={np.mean(final_returns):.2f}")
 
 
