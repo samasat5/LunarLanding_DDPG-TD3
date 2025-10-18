@@ -526,8 +526,8 @@ rets, biases, succ, q_vals, g_t  = run_eval(
     eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
 )
 plot_mc_estimate(rets, title="MC estimate with 95% CI (final)")
-plot_bias_stats(biases, title=" bias Q - MC G_t (final)")
-plot_q_vs_mc(q_vals, g_t, title="Calibration: Q(s,μ) vs MC G_t (final)")
+plot_bias_stats(biases, title=" MC bias Q - MC G_t (final)")
+# plot_q_vs_mc(q_vals, g_t, title="Calibration: Q(s,μ) vs MC G_t (final)")
 
 
 
