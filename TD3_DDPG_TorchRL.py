@@ -334,8 +334,9 @@ def train(
                 td = eval_env.reset() 
                 traj_q, traj_r, biases_all = [], [], []
                 G, gpow = 0.0, 1.0 
-                for _ in range(eval_max_steps): 
+                for t in range(eval_max_steps): 
                     actor = loss.actor_network
+                    obs = td["observation"] if t == 0 else td["next", "observation"]
                     s = td.select("observation")
                     a = actor(s)["action"]
                     td_in = td.empty_like().set("observation", obs)
@@ -345,6 +346,7 @@ def train(
                     traj_r.append(float(td["next","reward"]))
                     G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
+                    pdb.set_trace()
                     done = bool(td.get("done", False))
                     if "terminated" in td.keys(True) or "truncated" in td.keys(True):
                         done = done or bool(td.get("terminated", False)) or bool(td.get("truncated", False))
