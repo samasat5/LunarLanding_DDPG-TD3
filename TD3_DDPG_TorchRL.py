@@ -343,7 +343,7 @@ def train(
                     G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
                     
-                    
+                    pdb.set_trace()
                     done = bool(td.get("done", False))
                     if "terminated" in td.keys(True) or "truncated" in td.keys(True):
                         done = done or bool(td.get("terminated", False)) or bool(td.get("truncated", False))
@@ -361,7 +361,7 @@ def train(
                     G_t.append(acc)
                 G_t.reverse()
                 biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
-                pdb.set_trace()
+                
             # print(G)
             plot_bias_stats(biases_all,title="On-policy bias Q - MC G_t")
             # plot_q_vs_mc(biases_all, title=" Q(s,μ) vs MC G_t")
