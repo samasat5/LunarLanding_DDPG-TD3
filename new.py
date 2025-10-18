@@ -461,7 +461,7 @@ def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
             # Q(s,a)
             td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
             q_out = critic_eval(td_q)["state_action_value"]
-            pdb.set_trace()
+            
             if isinstance(q_out, (list, tuple)):
                 q = torch.minimum(q_out[0], q_out[1]).squeeze(-1).item()
             else:
