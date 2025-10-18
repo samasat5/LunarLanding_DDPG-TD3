@@ -39,7 +39,7 @@ MLP_SIZE = 256
 TAU = 0.01
 GAMMA = 0.99
 EVAL_EVERY = 1000   # frames
-EVAL_EPISODES = 30
+EVAL_EPISODES = 50
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 UPDATE_ACTOR_EVERY = 2
 # Seed the Python and RL environments to replicate similar results across training sessions. 
@@ -326,6 +326,7 @@ def train(
             frames_since_eval -= EVAL_EVERY
             actor = loss.actor_network 
             actor.eval()
+            critic.eval()
             for i in range(EVAL_EPISODES): 
                 td = eval_env.reset() 
                 G, gpow = 0.0, 1.0 
