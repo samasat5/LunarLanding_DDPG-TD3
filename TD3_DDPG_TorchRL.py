@@ -289,7 +289,9 @@ def train(
             
             biases.append(bias_batch)
 
-            total_count += data.numel()
+            batch_frames = data.numel()                
+            total_frames_seen += batch_frames
+            frames_since_eval += batch_frames
             total_episodes += data["next", "done"].sum()
             
             
@@ -318,8 +320,8 @@ def train(
         N = eval_env.batch_size #????\
         returns, successes = [], 0
         eval_max_steps = eval_env._max_episode_steps
-        print(total_count , eval_every, data.numel() )
-        if total_count % eval_every < data.numel():
+        print(frames_since_eval, total_count , eval_every, data.numel() )
+        if frames_since_eval < data.numel():
             actor = loss.actor_network 
             actor.eval()
             for i in range(EVAL_EPISODES): 
