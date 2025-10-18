@@ -360,7 +360,8 @@ def train(
                 G_t.reverse()
                 biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
             # print(G)
-            plot_mc_estimate(returns, biases_all,  title="MC estimate of J(μ) with 95% CI")
+            plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI (100 eps)")
+            plot_mc_estimate(biases_all, title="On-policy over-estimation bias Q(s,μ) − MC G_t")
                 
 
             
