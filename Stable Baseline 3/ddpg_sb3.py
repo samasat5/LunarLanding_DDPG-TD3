@@ -9,27 +9,14 @@ from stable_baselines3 import DDPG
 from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.logger import configure
-from stable_baselines3.common.callbacks import EvalCallback, EveryNTimesteps
+from stable_baselines3.common.callbacks import EveryNTimesteps
 from stable_baselines3.common.env_util import make_vec_env  
 from stable_baselines3.common.vec_env import VecNormalize
-from utils_sb3 import PlotLoggerDDPG, plot_stats_ddpg
-from MC_callback import EvalMCBiasChild
-
-# parameters and hyperparameters
-INIT_RAND_STEPS = 5_000 
-TOTAL_FRAMES = 1_000_000 # 1_000_000
-FRAMES_PER_BATCH = 100 # train freq
-OPTIM_STEPS =  10 # gradient steps
-BUFFER_LEN = 1_000_000
-REPLAY_BUFFER_SAMPLE = 256 # 128
-LOG_EVERY = 1_000
-MLP_SIZE = 256
-TAU = 0.005
-GAMMA = 0.99
-EVAL_EVERY = 10_000   # frames
-EVAL_EPISODES = 10
-DEVICE = "auto" 
-
+from PlotLogger import PlotLoggerDDPG
+from tmp import MonteCarloBiasCallback
+from utils_sb3 import plot_stats_ddpg
+from configs import *
+from EvalCallback import EvalCallback
 
 env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=0)
 eval_env = make_vec_env("LunarLanderContinuous-v3", n_envs=1, seed=1) # use a separate environment for training and eval to avoid training bias + different seed
@@ -49,16 +36,16 @@ action_noise = NormalActionNoise(
 
 logger = configure("./logs_ddpg/", ["stdout", "csv", "tensorboard"])
 qbias_cb = PlotLoggerDDPG(gamma=GAMMA, sample_n=10_000, save_csv="./logs_ddpg/stats/stats_log.csv")
-eval_mcbias = EvalMCBiasChild()
 eval_callback = EvalCallback( # The callback runs episodes on eval_env every EVAL_EVERY steps and saves the best model.
-    eval_env,
+    eval_env=eval_env,
+    gamma=GAMMA,
+    save_mc="./logs_ddpg/stats/mc_stats_log.csv",
     best_model_save_path="./ddpg_best",
     log_path="./ddpg_eval",
     eval_freq=EVAL_EVERY,
     n_eval_episodes=EVAL_EPISODES,
     deterministic=True,
     render=False,
-    callback_after_eval=eval_mcbias,
 )
 # trigger every EVAL_EVERY timesteps (works with n_envs>1 too, because it uses num_timesteps)
 every_qbias = EveryNTimesteps(n_steps=EVAL_EVERY, callback=qbias_cb)

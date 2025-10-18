@@ -103,6 +103,50 @@ def plot_stats_ddpg(csv_path="./logs_ddpg/stats/stats_log.csv"):
     plt.savefig(save_path, dpi=200)
     plt.close()
 
+    data = np.genfromtxt("./logs_ddpg/stats/mc_stats_log.csv", delimiter=",", names=True)
+    timesteps = data["timesteps"]
+    bias_mean = data["mc_mean"]
+    bias_std = data["mc_std"]
+    g_mean = data["G_mean"]
+    g_std = data["G_std"]
+    plt.plot(timesteps, bias_mean, label="Mean MC Bias")
+    plt.fill_between(
+        timesteps,
+        bias_mean - bias_std,
+        bias_mean + bias_std,
+        alpha=0.3,
+        label="std"
+    )
+    plt.axhline(0, color='black', linestyle='--')
+    plt.title("Monte Carlo Bias Evolution")
+    plt.ylabel("Q(s,a) - G(s,a)")
+    plt.xlabel("Timesteps")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    save_path = os.path.join(os.path.dirname(csv_path), "MCBias_plot.png")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=200)
+    plt.close()
+
+    plt.plot(timesteps, bias_mean, label="Mean MC Bias")
+    plt.fill_between(
+        timesteps,
+        g_mean - g_std,
+        g_mean + g_std,
+        alpha=0.3,
+        label="std"
+    )
+    plt.axhline(0, color='black', linestyle='--')
+    plt.title("Monte Carlo Bias Evolution")
+    plt.ylabel("G(s,a)")
+    plt.xlabel("Timesteps")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    save_path = os.path.join(os.path.dirname(csv_path), "GBias_plot.png")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=200)
+    plt.close()
+
     print(f"DDPG plots saved at: {save_path}")
     return save_path
     
@@ -287,5 +331,5 @@ def tmp_plot(csv_path="./logs_td3/stats/stats_log.csv"):
 
 if __name__ == "__main__":
     #plot_stats_td3()
-    #plot_stats_ddpg()
-    tmp_plot()
+    plot_stats_ddpg()
+    #tmp_plot()
