@@ -317,13 +317,14 @@ def train(
         # if (total_count // eval_every) != ((total_count - data.numel()) // eval_every):
         N = eval_env.batch_size #????
         returns, successes = [], 0
+        eval_max_steps = eval_env._max_episode_steps
         if total_count % eval_every < data.numel():
             actor = loss.actor_network 
             actor.eval()
             for _ in range(EVAL_EPISODES): 
                 td = eval_env.reset() 
                 G, gpow = 0.0, 1.0 
-                for _ in range(eval_max_steps =eval_env._max_episode_steps): 
+                for _ in range(eval_max_steps): 
                     actor = loss.actor_network
                     s = td.select("observation")
                     a = actor(s)["action"]
