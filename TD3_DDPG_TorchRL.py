@@ -340,6 +340,7 @@ def train(
                     obs = td["observation"] if t == 0 else td["next", "observation"]
                     s = td.select("observation")
                     a = actor(s)["action"]
+                    td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
                     pdb.set_trace()
                     td_in = td.empty_like().set("observation", obs)
                     q = critic(td_in.clone().set("action", a))["state_action_value"].item()
