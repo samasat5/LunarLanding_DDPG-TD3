@@ -339,7 +339,7 @@ def train(
                     q = critic_eval(td_q)["state_action_value"]
                     traj_q.append(q)
                     td = eval_env.step(td.clone().set("action", a))
-                    traj_r.append(float(td["next","reward"]))
+                    traj_r.append(floatraj_qt(td["next","reward"]))
                     G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
                     
