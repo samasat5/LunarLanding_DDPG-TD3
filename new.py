@@ -385,6 +385,75 @@ train(
     batch_size=REPLAY_BUFFER_SAMPLE,
 )
 
+
+
+
+
+
+
+
+
+@torch.no_grad()
+def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
+    actor_eval  = loss.actor_network
+    critic_eval = loss.qvalue_network if method == "TD3" else loss.value_network
+    actor_eval.eval()
+    critic_eval.eval()
+
+    returns, biases_all = [], []
+    successes = 0
+
+    for i in range(eval_episodes):
+        td = eval_env.reset()
+        traj_q, traj_r = [], []
+        G, gpow = 0.0, 1.0
+
+        for t in range(eval_max_steps):
+            obs = td["observation"] if t == 0 else td["next", "observation"]
+
+            s = TensorDict({"observation": obs}, batch_size=obs.shape[:-1])
+            a = actor_eval(s)["action"]
+
+            # Q(s,a)
+            td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
+            q_out = critic_eval(td_q)["state_action_value"]
+            if isinstance(q_out, (list, tuple)):  # TD3 twin critics
+                q = torch.minimum(q_out[0], q_out[1]).squeeze(-1).mean().item()
+            else:
+                q = q_out.squeeze(-1).mean().item()
+            traj_q.append(q)
+
+            # step
+            td = eval_env.step(td.clone().set("action", a))
+            r = float(td["next", "reward"])
+            traj_r.append(r)
+            G += gpow * r
+            gpow *= gamma
+
+            done = bool(td.get(("next", "done"), False))
+            if ("next", "terminated") in td.keys(True):
+                done = done or bool(td.get(("next", "terminated")))
+            if ("next", "truncated") in td.keys(True):
+                done = done or bool(td.get(("next", "truncated")))
+            if done:
+                if ("next", "success") in td.keys(True) and bool(td.get(("next", "success"))):
+                    successes += 1
+                break
+
+        returns.append(G)
+
+        # MC G_t (backward accumulate) and biases
+        G_t, acc = [], 0.0
+        for r in reversed(traj_r):
+            acc = r + gamma * acc
+            G_t.append(acc)
+        G_t.reverse()
+        biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
+
+    return returns, biases_all, successes
+
+
+
 @torch.no_grad()
 def evaluate_policy(
     method: str,
