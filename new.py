@@ -439,8 +439,8 @@ def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
 
 
 train(
-    method="DDPG",
-    loss=loss_ddpg,
+    method="TD3",
+    loss=loss_td3,
     optim_critic=optim_critic,
     optim_actor=optim_actor,
     replay_buffer=replay_buffer,
@@ -455,15 +455,15 @@ train(
 )
 
 rets, biases, succ, q_vals, g_t  = run_eval(
-    method="ddpg",
-    loss=loss_ddpg,
+    method="TD3",
+    loss=loss_td3,
     eval_env=eval_env,
     eval_episodes=EVAL_EPISODES,
     gamma=GAMMA,
     eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
 )
-plot_mc_estimate(rets, title="DDPG: MC estimate with 95% CI (final)")
-plot_bias_stats(biases, title=" DDPG: MC bias Q - MC G_t ")
+plot_mc_estimate(rets, title="TD3: MC estimate with 95% CI ")
+plot_bias_stats(biases, title=" TD3: MC bias Q - MC G_t ")
 
 
 
