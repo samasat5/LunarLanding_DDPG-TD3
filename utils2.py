@@ -4,81 +4,74 @@ from torchrl.objectives import SoftUpdate
 from tensordict import TensorDict
 import numpy as np
 import pdb  
+import matplotlib.pyplot as plt
+import math
+import numpy as np
+import matplotlib.pyplot as plt
 
-@torch.no_grad()
-def evaluate_mc_bias(loss, 
-                     eval_env,
-                     gamma=0.99,
-                     episodes=5,
-                     ):
 
-    actor = loss.actor_network  
-    qnet = getattr(loss, "qvalue_network", None) or loss.value_network
 
-    all_bias = []
-    all_predq = []
-    all_returns = []
 
-    for _ in range(episodes):
-        td = eval_env.reset()
-        ep_obs = []
-        ep_act = []
-        ep_rew = []
+def plot_bias_stats(biases, title="MC bias Q - MC G_t"):
+    import numpy as np
+    biases = np.asarray(biases, dtype=float)  # <-- accept list or array
+    if biases.size == 0:
+        return
+    k = np.arange(1, len(biases)+1)
+    run_mean = np.cumsum(biases)/k
+    diffsq = np.cumsum((biases - run_mean)**2)
+    var = np.zeros_like(run_mean)
+    if len(biases) >= 2:
+        var[1:] = diffsq[1:] / (k[1:]-1)
+    ci = 1.96*np.sqrt(var)/np.sqrt(k)
 
-        # rollout with deterministic policy
-        while True:
-           
-            td_in = td.select("observation")
-            td_pi = actor(td_in.clone()) # gives action and observation
-            td_env = td.clone()
-            td_env.set("action", td_pi["action"])
-            td = eval_env.step(td_env)
+    
+    plt.figure(figsize=(7,4))
+    plt.plot(k, run_mean, label="Running mean bias")
+    plt.fill_between(k, run_mean-ci, run_mean+ci, alpha=0.2, label="95% CI")
+    plt.axhline(0, ls="--", lw=1, label="Zero bias")
+    plt.title(title); plt.xlabel("MC steps (k)"); plt.ylabel("Q - G_t")
+    plt.legend(); plt.tight_layout(); plt.show()
 
-            ep_obs.append(td_in["observation"])
-            ep_act.append(td_pi["action"])
 
-            td = eval_env.step(td_pi)
-            ep_rew.append(td["next", "reward"].item())
+def plot_q_vs_mc(q_vals, g_t_all, title="Calibration: Q(s,μ) vs MC G_t"):
+    if q_vals.size == 0: return
+    plt.figure(figsize=(5,5))
+    plt.scatter(g_t_all, q_vals, s=6, alpha=0.3)
+    m = np.nanmean(np.concatenate([q_vals, g_t_all]))
+    lo, hi = np.percentile(np.concatenate([q_vals, g_t_all]), [2, 98])
+    plt.plot([lo, hi], [lo, hi], 'k--', lw=1)  # ideal y=x
+    plt.xlabel("MC return-to-go G_t"); plt.ylabel("Critic Q(s,μ)")
+    plt.title(title); plt.tight_layout(); plt.show()
+    
+    
+    
+def plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI"):
+    """returns: list/array of episodic (discounted) returns G_1..G_N"""
+    r = np.asarray(returns, dtype=float)
+    N = len(r)
+    # running mean & CI
+    k = np.arange(1, N+1)
+    running_mean = np.cumsum(r) / k
+    # unbiased running std (nan for k=1 -> replace with 0)
+    diffsq = np.cumsum((r - running_mean)**2)
+    running_var = np.zeros(N)
+    running_var[1:] = diffsq[1:] / (k[1:] - 1)
+    running_std = np.sqrt(running_var)
+    ci95 = 1.96 * running_std / np.sqrt(k)
+    lo = running_mean - ci95
+    hi = running_mean + ci95
 
-            if td["next", "done"].item():
-                break
-
-        G = []
-        g = 0.0
-        for r in reversed(ep_rew):
-            g = r + gamma * g
-            G.append(g)
-        G = list(reversed(G)) 
-        obs_batch = torch.stack(ep_obs, 0)
-        act_batch = torch.stack(ep_act, 0)
-        td_batch = TensorDict(
-            {"observation": obs_batch, "action": act_batch},
-            batch_size=[obs_batch.shape[0]],
-        )
-        td_q = qnet(td_batch.clone())
-
-        # TorchRL q-nets usually write "state_action_value"
-        q_pred = td_q.get("state_action_value")
-        # If TD3 with two critics, q_pred may be a tuple/list; take min
-        if isinstance(q_pred, (tuple, list)):
-            q1, q2 = q_pred
-            q_pred = torch.minimum(q1, q2)
-
-        q_pred = q_pred.squeeze(-1)  # [T]
-        G_t = torch.tensor(G, dtype=q_pred.dtype)
-
-        bias = (q_pred - G_t).cpu().numpy()
-        all_bias.extend(bias.tolist())
-        all_predq.extend(q_pred.cpu().numpy().tolist())
-        all_returns.extend(G_t.cpu().numpy().tolist())
-
-    mean_bias = float(np.mean(all_bias))
-    details = {
-        "bias_per_step": np.array(all_bias),
-        "q_pred_per_step": np.array(all_predq),
-        "return_per_step": np.array(all_returns),
-    }
-    return mean_bias, details
+    plt.figure(figsize=(7,4))
+    plt.plot(k, running_mean, label="Running mean Ȳₖ")
+    plt.fill_between(k, lo, hi, alpha=0.2, label="95% CI")
+    plt.axhline(running_mean[-1], linestyle="--", linewidth=1, label=f"Final mean = {running_mean[-1]:.2f}")
+    plt.xlabel("Episodes (k)")
+    plt.ylabel("Estimated return")
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
 
 
 

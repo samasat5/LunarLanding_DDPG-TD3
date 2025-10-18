@@ -29,7 +29,7 @@ from tqdm import tqdm
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 50_000
+TOTAL_FRAMES = 100_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -39,7 +39,7 @@ MLP_SIZE = 256
 TAU = 0.01
 GAMMA = 0.99
 EVAL_EVERY = 1000   # frames
-EVAL_EPISODES = 10
+EVAL_EPISODES = 50
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 UPDATE_ACTOR_EVERY = 2
 # Seed the Python and RL environments to replicate similar results across training sessions. 
@@ -313,6 +313,7 @@ def train(
             "Mean Q": f"{torch.tensor(qvalues[-50:]).mean().item():.2f}",
             "Bias": f"{torch.tensor(biases[-50:]).mean().item():.2f}",
         })
+        
         pbar.update(data.numel())
         
             
@@ -320,71 +321,20 @@ def train(
         eval_max_steps = eval_env._max_episode_steps
         
         
-        if  (frames_since_eval >= EVAL_EVERY) and (
-            total_frames_seen >= 0.99 * TOTAL_FRAMES):
-        # if  (frames_since_eval >= EVAL_EVERY) :
-            
-            frames_since_eval -= EVAL_EVERY
-            actor_eval  = loss.actor_network
-            critic_eval = loss.qvalue_network if method == "TD3" else loss.value_network
-            actor_eval.eval()
-            critic_eval.eval()
-            for i in range(EVAL_EPISODES): 
-                td = eval_env.reset() 
-                traj_q, traj_r, biases_all = [], [], []
-                G, gpow = 0.0, 1.0 
-                for t in range(eval_max_steps): 
-                    obs = td["observation"] if t == 0 else td["next", "observation"]
-                    s = td.select("observation")
-                    a = actor_eval(s)["action"]
-                    td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
-                    q = critic_eval(td_q)["state_action_value"].item()
-                    traj_q.append(q)
-                    td = eval_env.step(td.clone().set("action", a))
-                    traj_r.append(float(td["next","reward"]))
-                    G += gpow * td["next","reward"].item()
-                    gpow *= GAMMA
-                    
-                    
-                    done = bool(td.get("done", False))
-                    if "terminated" in td.keys(True) or "truncated" in td.keys(True):
-                        done = done or bool(td.get("terminated", False)) or bool(td.get("truncated", False))
-                    if done:
-                        if "success" in td.keys(True) and bool(td.get("success")):
-                            successes += 1
-                        break
-                
-                # print(f"Eval episode nb {i} return: {G}")
-                returns.append(G)
-                G_t = []
-                acc = 0.0
-                for r in reversed(traj_r):
-                    acc = r + GAMMA * acc
-                    G_t.append(acc)
-                G_t.reverse()
-                biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
-                
-            # print(G)
-            plot_mc_estimate(returns, title="DDPG MC estimate  with 95% CI")
-            plot_bias_stats(biases_all,title="DDPG bias Q - MC G_t")
-            # plot_q_vs_mc(biases_all, title=" Q(s,μ) vs MC G_t")
-                
-
     pbar.close()
     t1 = time.time()    
     print(f"Training took {t1-t0:.2f}s")
     torchrl_logger.info(
         f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
     )
-    # window = 200  # adjust for smoothing strength
-    # smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
-    # smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
+    window = 200  # adjust for smoothing strength
+    smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
+    smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     
     # save_series("biases_newtd3.csv", biases, smooth_bias, window)
     # save_series("qvalues_newtd3.csv", qvalues, smooth_qvalue, window)
 
     # plt.figure(figsize=(12,5))
-    # plt.xtitle(f"Training {method} - Q Values")
     # plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     # plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
     # plt.title(f"Training {method} - smoothed Q Values")
@@ -395,7 +345,6 @@ def train(
     # plt.figure(figsize=(12,4))
     # plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     # # plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
-    # plt.xtitle(f"{method} – episodic return")
     # plt.title(f"{method} – episodic return")
     # plt.xlabel("Episode")
     # plt.ylabel("Return")
@@ -404,7 +353,7 @@ def train(
     
     
     # plt.figure(figsize=(12,5))
-    # plt.xtitle(f"Training {method} - Bias")
+    
     # plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     # plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
     # plt.title(f"Training {method} - TD Bias")
@@ -413,12 +362,79 @@ def train(
     # plt.show()
 
     # plt.figure(figsize=(12,5))
-    # plt.xtitle(f"Training {method} - Q Values")
+
     # plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
     # plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
     # plt.title(f"Training {method} - smoothed Q Values")
     # plt.xlabel("Training Steps")
     # plt.show()
+
+
+
+
+
+@torch.no_grad()
+def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
+    actor_eval  = loss.actor_network
+    critic_eval = loss.qvalue_network if method == "TD3" else loss.value_network
+    actor_eval.eval(); critic_eval.eval()
+
+    returns, biases_all = [], []
+    q_vals_all, g_t_all = [], []     # <--- add these
+    successes = 0
+    max_steps = eval_max_steps or getattr(eval_env, "_max_episode_steps", None) or 10_000
+
+    for _ in range(eval_episodes):
+        td = eval_env.reset()
+        traj_q, traj_r = [], []
+        G, gpow = 0.0, 1.0
+
+        for t in range(max_steps):
+            obs = td["observation"] if t == 0 else td["next", "observation"]
+            s = TensorDict({"observation": obs}, batch_size=obs.shape[:-1])
+            a = actor_eval(s)["action"]
+
+            # Q(s,a)
+            td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
+            q_out = critic_eval(td_q)["state_action_value"]
+            
+            if isinstance(q_out, (list, tuple)):
+                q = torch.minimum(q_out[0], q_out[1]).squeeze(-1).item()
+            else:
+                q = q_out.squeeze(-1).item()
+            traj_q.append(q)
+
+            # step
+            td = eval_env.step(td.clone().set("action", a))
+            r = float(td["next", "reward"])
+            traj_r.append(r)
+            G += gpow * r
+            gpow *= gamma
+
+            done = bool(td.get(("next","done"), False))
+            if ("next","terminated") in td.keys(True): done |= bool(td.get(("next","terminated")))
+            if ("next","truncated")  in td.keys(True): done |= bool(td.get(("next","truncated")))
+            if done:
+                if ("next","success") in td.keys(True) and bool(td.get(("next","success"))):
+                    successes += 1
+                break
+
+        returns.append(G)
+
+        # MC G_t and biases
+        G_t, acc = [], 0.0
+        for r in reversed(traj_r):
+            acc = r + gamma * acc
+            G_t.append(acc)
+        G_t.reverse()
+
+        biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
+        q_vals_all.extend(traj_q)     # <--- collect
+        g_t_all.extend(G_t)           # <--- collect
+
+    return returns, biases_all, successes, np.array(q_vals_all, dtype=float), np.array(g_t_all, dtype=float)
+
+
 
 
 
@@ -438,3 +454,136 @@ train(
     batch_size=REPLAY_BUFFER_SAMPLE,
 )
 
+rets, biases, succ, q_vals, g_t  = run_eval(
+    method="TD3",
+    loss=loss_td3,
+    eval_env=eval_env,
+    eval_episodes=EVAL_EPISODES,
+    gamma=GAMMA,
+    eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
+)
+plot_mc_estimate(rets, title="TD3: MC estimate with 95% CI ")
+plot_bias_stats(biases, title=" TD3: MC bias Q - MC G_t ")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@torch.no_grad()
+def evaluate_policy(
+    method: str,
+    loss,                  # DDPGLoss or TD3Loss
+    eval_env,              # TransformedEnv
+    episodes: int = 10,
+    gamma: float = 0.99,
+    max_steps: int | None = None,
+    plot: bool = True,     # uses your utils2 plotters if True
+):
+    
+    # --- pick actor & critic from the loss (so you evaluate targets used in training) ---
+    actor_eval = loss.actor_network
+    actor_eval.eval()
+
+    # DDPG: .value_network ; TD3: .qvalue_network
+    critic_eval = getattr(loss, "qvalue_network", None) or getattr(loss, "value_network")
+
+    # helper: robustly get scalar Q(s,a) as float; TD3 -> min over the two heads
+    def compute_q(obs, act) -> float:
+        td_q = TensorDict({"observation": obs, "action": act}, batch_size=obs.shape[:-1])
+        out = critic_eval(td_q)
+        v = out.get("state_action_value")
+        # v can be tensor [...,1], or a tuple/list of such tensors (TD3 with twin critics)
+        if isinstance(v, (tuple, list)):
+            vals = [vi.squeeze(-1) for vi in v]
+            qmin = torch.minimum(vals[0], vals[1]).item()
+            return qmin
+        return v.squeeze(-1).item()
+
+    returns_all = []       # per-episode return G (MC from t=0)
+    biases_all = []        # list of (q_t - G_t) over all steps in all eval episodes
+
+    max_ep_steps = max_steps or getattr(eval_env, "_max_episode_steps", None)
+
+    for _ in range(episodes):
+        td = eval_env.reset()                        # has "observation"
+        obs = td["observation"]                      # current obs tensor
+        traj_q, traj_r = [], []
+
+        for t in range(max_ep_steps or 10_000):      # safe upper bound if env doesn’t expose it
+            # deterministic action from actor on current obs
+            td_in = TensorDict({"observation": obs}, batch_size=obs.shape[:-1])
+            a = actor_eval(td_in)["action"]
+
+            # Q(s,a) BEFORE the step (same (s,a) we execute)
+            q_sa = compute_q(obs, a)
+            traj_q.append(q_sa)
+
+            # env step
+            td = eval_env.step(td_in.clone().set("action", a))
+            r = float(td["next", "reward"])
+            traj_r.append(r)
+
+            # next observation for the next loop
+            obs = td["next", "observation"]
+
+            # termination check
+            done = bool(td["next", "done"])
+            if ("next", "terminated") in td.keys(True):
+                done = done or bool(td["next", "terminated"])
+            if ("next", "truncated") in td.keys(True):
+                done = done or bool(td["next", "truncated"])
+
+            if done:
+                break
+
+        # episode-level MC returns G_t (backward accumulate)
+        G_t = []
+        acc = 0.0
+        for r in reversed(traj_r):
+            acc = r + gamma * acc
+            G_t.append(acc)
+        G_t.reverse()
+
+        # store biases q_t - G_t and episode return (G_0)
+        biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
+        returns_all.append(G_t[0] if len(G_t) else 0.0)
+
+    # plotting (your utils2)
+    if plot:
+        try:
+            plot_mc_estimate(returns_all, title="MC estimate with 95% CI")
+            plot_bias_stats(biases_all, title="On-policy bias Q - MC G_t")
+            # plot_q_vs_mc(biases_all, title=" Q(s,μ) vs MC G_t")  # enable if you want
+        except Exception as e:
+            print(f"[evaluate_policy] plot error (skipping): {e}")
+
+    # basic stats back to caller
+    biases_np = np.array(biases_all, dtype=float) if len(biases_all) else np.array([0.0])
+    returns_np = np.array(returns_all, dtype=float) if len(returns_all) else np.array([0.0])
+    out = {
+        "episodes": episodes,
+        "mean_return": float(returns_np.mean()),
+        "std_return": float(returns_np.std(ddof=1)) if len(returns_np) > 1 else 0.0,
+        "mean_bias": float(biases_np.mean()),
+        "std_bias": float(biases_np.std(ddof=1)) if len(biases_np) > 1 else 0.0,
+        "num_steps_evaluated": int(len(biases_all)),
+    }
+    return out
