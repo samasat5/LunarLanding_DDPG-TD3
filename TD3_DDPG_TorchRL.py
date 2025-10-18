@@ -316,15 +316,23 @@ def train(
         
         # if (total_count // eval_every) != ((total_count - data.numel()) // eval_every):
         N = eval_env.batch_size #????
+        returns, successes = [], 0
         if total_count % eval_every < data.numel():
             actor.eval()
             for _ in range(eval_episodes): 
                 td = eval_env.reset() 
+                G, gpow = 0.0, 1.0 
                 for _ in range(eval_max_steps=1000): 
                     actor = loss.actor_network
                     s = td.select("observation")
                     a = actor(s)["action"]
                     td = eval_env.step(td.clone().set("action", a))
+                    G += gpow * float(td["reward"])
+                    gpow *= GAMMA
+                    if bool(td["done"]):
+                        if "success" in td.keys(True) and bool(td["success"]):
+                            success += 1
+                returns.append(G)
                 
 
             
