@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 
 
-def plot_bias_stats(biases, title="On-policy bias Q - MC G_t"):
+def plot_bias_stats(biases, title="MC bias Q - MC G_t"):
     import numpy as np
     biases = np.asarray(biases, dtype=float)  # <-- accept list or array
     if biases.size == 0:
@@ -30,7 +30,7 @@ def plot_bias_stats(biases, title="On-policy bias Q - MC G_t"):
     plt.plot(k, run_mean, label="Running mean bias")
     plt.fill_between(k, run_mean-ci, run_mean+ci, alpha=0.2, label="95% CI")
     plt.axhline(0, ls="--", lw=1, label="Zero bias")
-    plt.title(title); plt.xlabel("On-policy steps (k)"); plt.ylabel("Q - G_t")
+    plt.title(title); plt.xlabel("MC steps (k)"); plt.ylabel("Q - G_t")
     plt.legend(); plt.tight_layout(); plt.show()
 
 
