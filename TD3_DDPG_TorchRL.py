@@ -363,6 +363,7 @@ def train(
                 biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
                 
             # print(G)
+            plot_mc_estimate(returns, title="MC estimate  with 95% CI")
             plot_bias_stats(biases_all,title="On-policy bias Q - MC G_t")
             # plot_q_vs_mc(biases_all, title=" Q(s,μ) vs MC G_t")
                 
