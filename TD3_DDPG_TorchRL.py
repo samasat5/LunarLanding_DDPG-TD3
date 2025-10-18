@@ -323,14 +323,8 @@ def train(
                 eval_env=eval_env,
                 gamma=GAMMA,
                 episodes=EVAL_EPISODES,)
-            mc_bias_means.append(mc_mean_bias)
-            mc_bias_steps.append(total_count)
 
-            torchrl_logger.info(
-                f"[EVAL] steps={total_count} MC-mean-bias={mc_mean_bias:.4f} "
-                f"(avg Q={mc_details['q_pred_per_step'].mean():.3f}, "
-                f"avg return={mc_details['return_per_step'].mean():.3f})"
-            )
+            
 
         
 
