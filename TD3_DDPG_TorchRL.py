@@ -339,6 +339,7 @@ def train(
                     q = critic(td_in.clone().set("action", a))["state_action_value"].item()
                     traj_q.append(q)
                     td = eval_env.step(td.clone().set("action", a))
+                    traj_r.append(float(td["next","reward"]))
                     G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
                     done = bool(td.get("done", False))
