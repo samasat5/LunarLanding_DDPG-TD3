@@ -395,19 +395,13 @@ def evaluate_policy(
     max_steps: int | None = None,
     plot: bool = True,     # uses your utils2 plotters if True
 ):
-    """
-    Runs deterministic rollouts on eval_env with the current actor (no exploration),
-    collects per-step Q(s,a) and MC returns G_t, and returns bias stats.
-    """
-
+    
     # --- pick actor & critic from the loss (so you evaluate targets used in training) ---
     actor_eval = loss.actor_network
     actor_eval.eval()
 
     # DDPG: .value_network ; TD3: .qvalue_network
     critic_eval = getattr(loss, "qvalue_network", None) or getattr(loss, "value_network")
-    if critic_eval is None:
-        raise RuntimeError("Could not find critic network on loss object.")
 
     # helper: robustly get scalar Q(s,a) as float; TD3 -> min over the two heads
     def compute_q(obs, act) -> float:
