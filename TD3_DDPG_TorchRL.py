@@ -337,6 +337,7 @@ def train(
                     a = actor(s)["action"]
                     td_in = td.empty_like().set("observation", obs)
                     q = critic(td_in.clone().set("action", a))["state_action_value"].item()
+                    traj_q.append(q)
                     td = eval_env.step(td.clone().set("action", a))
                     G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
