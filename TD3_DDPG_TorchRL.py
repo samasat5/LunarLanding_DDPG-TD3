@@ -331,6 +331,7 @@ def train(
                     td = eval_env.step(td.clone().set("action", a))
                     G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
+                    pdb.set_trace()
                     if bool(td["done"]):
                         if "success" in td.keys(True) and bool(td["success"]):
                             success += 1
