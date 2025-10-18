@@ -520,6 +520,30 @@ rets_td3, biases_td3, succ_td3, q_td3, g_td3 = run_eval(
     eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
 )
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+def plot_bias_overlay(biases_dict, window=400, title="MC bias Q - MC G_t (overlay)"):
+    plt.figure(figsize=(10,5))
+    for label, biases in biases_dict.items():
+        b = np.asarray(biases, float)
+        if len(b) < window:  # avoid empty after smoothing
+            continue
+        sm = np.convolve(b, np.ones(window)/window, mode='valid')
+        x = np.arange(len(sm))
+        plt.plot(x, sm, label=label, linewidth=2)
+    plt.axhline(0.0, ls='--', lw=1, color='k', label="Zero bias")
+    plt.xlabel("On-policy steps (k)")
+    plt.ylabel("Q - G_t")
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+plot_bias_overlay(
+    {"DDPG": biases_ddpg, "TD3(min)": biases_td3},
+    window=400
+)
 
 
 
