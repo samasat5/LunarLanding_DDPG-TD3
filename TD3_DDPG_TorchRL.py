@@ -329,8 +329,7 @@ def train(
                     s = td.select("observation")
                     a = actor(s)["action"]
                     td = eval_env.step(td.clone().set("action", a))
-                    pdb.set_trace()
-                    G += gpow * td["reward"].item()
+                    G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
                     if bool(td["done"]):
                         if "success" in td.keys(True) and bool(td["success"]):
