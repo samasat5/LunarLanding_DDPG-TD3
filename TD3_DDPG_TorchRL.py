@@ -341,14 +341,13 @@ def train(
                     s = td.select("observation")
                     a = actor(s)["action"]
                     td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
-                    pdb.set_trace()
-                    td_in = td.empty_like().set("observation", obs)
-                    q = critic(td_in.clone().set("action", a))["state_action_value"].item()
+                    q = critic(td_q)["state_action_value"]
                     traj_q.append(q)
                     td = eval_env.step(td.clone().set("action", a))
                     traj_r.append(float(td["next","reward"]))
                     G += gpow * td["next","reward"].item()
                     gpow *= GAMMA
+                    pdb.set_trace()
                     
                     done = bool(td.get("done", False))
                     if "terminated" in td.keys(True) or "truncated" in td.keys(True):
