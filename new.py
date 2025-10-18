@@ -528,7 +528,7 @@ rets, biases, succ, q_vals, g_t  = run_eval(
 )
 plot_mc_estimate(rets, title="MC estimate with 95% CI (final)")
 plot_bias_stats(biases, title=" MC bias Q - MC G_t (final)")
-# plot_q_vs_mc(q_vals, g_t, title="Calibration: Q(s,μ) vs MC G_t (final)")
+
 
 
 
