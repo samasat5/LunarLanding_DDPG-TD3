@@ -204,6 +204,7 @@ def train(
     episode_returns = []
     ep_return = 0.0
     mc_bias_means, mc_bias_steps = [], []
+    frames_since_eval,total_frames_seen = 0, 0
     
 
     optim_actor = Adam(loss.actor_network_params.values(True, True),  lr=2e-4)
@@ -345,7 +346,7 @@ def train(
                 
                 print(f"Eval episode nb {i} return: {G}")
                 returns.append(G)
-            print(G[:10])
+            print(G)
         plot_mc_estimate(returns, title="MC estimate of J(μ) with 95% CI")
                 
 
