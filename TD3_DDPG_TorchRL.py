@@ -257,23 +257,22 @@ def train(
             # Actor update
             if method == "DDPG":
                 for p in critic.parameters(): p.requires_grad = False
-                pdb.set_trace()
                 optim_actor.zero_grad(set_to_none=True)
                 loss_pi = loss_out["loss_actor"]
                 loss_pi.backward()
                 optim_actor.step()
                 updater.step()
-                for p in loss.value_network_params.values(True, True): p.requires_grad = True
+                for p in critic.parameters(): p.requires_grad = True
             
             if method == "TD3":
                 if update_step % UPDATE_ACTOR_EVERY == 0:
-                    for p in loss.qvalue_network_params.values(True, True): p.requires_grad = False
+                    for p in critic.parameters(): p.requires_grad = False
                     optim_actor.zero_grad(set_to_none=True)
                     loss_pi = loss_out["loss_actor"]
                     loss_pi.backward()
                     # torch.nn.utils.clip_grad_norm_(loss.actor_network_params.values(True, True), 1.0)
                     optim_actor.step()
-                    for p in loss.qvalue_network_params.values(True, True): p.requires_grad = True
+                    for p in critic.parameters(): p.requires_grad = True
 
                     # === Soft update targets only when actor is updated ===
                     updater.step()
