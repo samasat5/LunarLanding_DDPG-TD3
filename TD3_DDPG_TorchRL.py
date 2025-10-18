@@ -79,6 +79,7 @@ eval_env = TransformedEnv(
 env.transform[2].init_stats(1024) 
 torch.manual_seed(0)
 env.set_seed(0)
+eval_env.set_seed(4)
 check_env_specs(env) 
 
 eval_env.transform[2].init_stats(1024) 
