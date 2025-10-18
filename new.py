@@ -29,7 +29,7 @@ from tqdm import tqdm
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 100_000
+TOTAL_FRAMES = 10_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -373,70 +373,6 @@ def train(
 
 
 
-
-
-@torch.no_grad()
-def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
-    actor_eval  = loss.actor_network
-    critic_eval = loss.qvalue_network if method == "TD3" else loss.value_network
-    actor_eval.eval()
-    critic_eval.eval()
-
-    returns, biases_all = [], []
-    successes = 0
-
-    for i in range(eval_episodes):
-        td = eval_env.reset()
-        traj_q, traj_r = [], []
-        G, gpow = 0.0, 1.0
-
-        for t in range(eval_max_steps):
-            obs = td["observation"] if t == 0 else td["next", "observation"]
-
-            s = TensorDict({"observation": obs}, batch_size=obs.shape[:-1])
-            a = actor_eval(s)["action"]
-
-            # Q(s,a)
-            td_q = TensorDict({"observation": obs, "action": a}, batch_size=obs.shape[:-1])
-            q_out = critic_eval(td_q)["state_action_value"]
-            if isinstance(q_out, (list, tuple)):  # TD3 twin critics
-                q = torch.minimum(q_out[0], q_out[1]).squeeze(-1).mean().item()
-            else:
-                q = q_out.squeeze(-1).mean().item()
-            traj_q.append(q)
-
-            # step
-            td = eval_env.step(td.clone().set("action", a))
-            r = float(td["next", "reward"])
-            traj_r.append(r)
-            G += gpow * r
-            gpow *= gamma
-
-            done = bool(td.get(("next", "done"), False))
-            if ("next", "terminated") in td.keys(True):
-                done = done or bool(td.get(("next", "terminated")))
-            if ("next", "truncated") in td.keys(True):
-                done = done or bool(td.get(("next", "truncated")))
-            if done:
-                if ("next", "success") in td.keys(True) and bool(td.get(("next", "success"))):
-                    successes += 1
-                break
-
-        returns.append(G)
-
-        # MC G_t (backward accumulate) and biases
-        G_t, acc = [], 0.0
-        for r in reversed(traj_r):
-            acc = r + gamma * acc
-            G_t.append(acc)
-        G_t.reverse()
-        biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
-
-    return returns, biases_all, successes
-
-
-
-
 @torch.no_grad()
 def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
     actor_eval  = loss.actor_network
@@ -502,23 +438,60 @@ def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
 
 
 
-train(
-    method="TD3",
-    loss=loss_td3,
-    optim_critic=optim_critic,
-    optim_actor=optim_actor,
-    replay_buffer=replay_buffer,
-    collector=collector,
-    total_frames=TOTAL_FRAMES,
-    eval_env=eval_env,
-    eval_episodes=EVAL_EPISODES,
-    log_every=LOG_EVERY,
-    eval_every=EVAL_EVERY,
-    opt_steps=OPTIM_STEPS,
-    batch_size=REPLAY_BUFFER_SAMPLE,
-)
+# train(
+#     method="TD3",
+#     loss=loss_td3,
+#     optim_critic=optim_critic,
+#     optim_actor=optim_actor,
+#     replay_buffer=replay_buffer,
+#     collector=collector,
+#     total_frames=TOTAL_FRAMES,
+#     eval_env=eval_env,
+#     eval_episodes=EVAL_EPISODES,
+#     log_every=LOG_EVERY,
+#     eval_every=EVAL_EVERY,
+#     opt_steps=OPTIM_STEPS,
+#     batch_size=REPLAY_BUFFER_SAMPLE,
+# )
 
-rets, biases, succ, q_vals, g_t  = run_eval(
+# rets, biases, succ, q_vals, g_t  = run_eval(
+#     method="DDPG",
+#     loss=loss_ddpg,
+#     eval_env=eval_env,
+#     eval_episodes=EVAL_EPISODES,
+#     gamma=GAMMA,
+#     eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
+# )
+# plot_mc_estimate(rets, title="MC estimate with 95% CI (final)")
+# plot_bias_stats(biases, title=" MC bias Q - MC G_t (final)")
+
+
+
+
+
+# --- IMPORTANT: share the SAME ObservationNorm between train/eval envs ---
+# (Either reuse one instance in both envs, or init eval's obs-norm then load state_dict)
+
+# Fresh replay buffer & collector per method helps avoid leakage
+def make_rb_and_collector(env):
+    rb = ReplayBuffer(storage=LazyTensorStorage(max_size=BUFFER_LEN), sampler=RandomSampler())
+    coll = SyncDataCollector(
+        env, rollout_policy, frames_per_batch=FRAMES_PER_BATCH,
+        total_frames=TOTAL_FRAMES, init_random_frames=INIT_RAND_STEPS, device=DEVICE
+    )
+    return rb, coll
+
+# ----- DDPG -----
+rb_ddpg, coll_ddpg = make_rb_and_collector(env)
+train(
+    method="DDPG",
+    loss=loss_ddpg,
+    optim_critic=optim_critic,  # ignored inside train() since you recreate them, but OK
+    optim_actor=optim_actor,
+    replay_buffer=rb_ddpg,
+    collector=coll_ddpg,
+)
+rets_ddpg, biases_ddpg, succ_ddpg, q_ddpg, g_ddpg = run_eval(
     method="DDPG",
     loss=loss_ddpg,
     eval_env=eval_env,
@@ -526,8 +499,29 @@ rets, biases, succ, q_vals, g_t  = run_eval(
     gamma=GAMMA,
     eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
 )
-plot_mc_estimate(rets, title="MC estimate with 95% CI (final)")
-plot_bias_stats(biases, title=" MC bias Q - MC G_t (final)")
+
+# ----- TD3 -----
+# Rebuild a fresh buffer+collector (don’t reuse ddpg’s)
+rb_td3, coll_td3 = make_rb_and_collector(env)
+train(
+    method="TD3",
+    loss=loss_td3,
+    optim_critic=optim_critic,
+    optim_actor=optim_actor,
+    replay_buffer=rb_td3,
+    collector=coll_td3,
+)
+rets_td3, biases_td3, succ_td3, q_td3, g_td3 = run_eval(
+    method="TD3",
+    loss=loss_td3,
+    eval_env=eval_env,
+    eval_episodes=EVAL_EPISODES,
+    gamma=GAMMA,
+    eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
+)
+
+
+
 
 
 
