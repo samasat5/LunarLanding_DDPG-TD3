@@ -316,7 +316,7 @@ def train(
             
         returns, successes = [], 0
         eval_max_steps = eval_env._max_episode_steps
-        print(frames_since_eval, total_count , eval_every, data.numel() )
+        # print(frames_since_eval, total_count , eval_every, data.numel() )
         
         if  (frames_since_eval >= EVAL_EVERY) and (
             total_frames_seen >= 0.9 * TOTAL_FRAMES):
