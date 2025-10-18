@@ -369,24 +369,6 @@ def train(
     plt.xlabel("Training Steps")
     plt.show()
 
-train(
-    method="DDPG",
-    loss=loss_ddpg,
-    optim_critic=optim_critic,
-    optim_actor=optim_actor,
-    replay_buffer=replay_buffer,
-    collector=collector,
-    total_frames=TOTAL_FRAMES,
-    eval_env=eval_env,
-    eval_episodes=EVAL_EPISODES,
-    log_every=LOG_EVERY,
-    eval_every=EVAL_EVERY,
-    opt_steps=OPTIM_STEPS,
-    batch_size=REPLAY_BUFFER_SAMPLE,
-)
-
-
-
 
 
 
@@ -451,6 +433,42 @@ def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
         biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
 
     return returns, biases_all, successes
+
+
+
+
+
+
+train(
+    method="DDPG",
+    loss=loss_ddpg,
+    optim_critic=optim_critic,
+    optim_actor=optim_actor,
+    replay_buffer=replay_buffer,
+    collector=collector,
+    total_frames=TOTAL_FRAMES,
+    eval_env=eval_env,
+    eval_episodes=EVAL_EPISODES,
+    log_every=LOG_EVERY,
+    eval_every=EVAL_EVERY,
+    opt_steps=OPTIM_STEPS,
+    batch_size=REPLAY_BUFFER_SAMPLE,
+)
+
+final_returns, final_biases, final_successes = run_eval(
+    method="DDPG",
+    loss=loss_ddpg,
+    eval_env=eval_env,
+    eval_episodes=EVAL_EPISODES,
+    gamma=GAMMA,
+    eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
+)
+# plot_mc_estimate(final_returns, title="MC estimate with 95% CI (final)")
+plot_bias_stats(final_biases, title="On-policy bias Q - MC G_t (final)")
+print(f"[Final Eval] episodes={EVAL_EPISODES} mean_return={np.mean(final_returns):.2f}")
+
+
+
 
 
 
