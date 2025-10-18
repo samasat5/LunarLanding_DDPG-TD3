@@ -315,6 +315,7 @@ def train(
         
         
         # if (total_count // eval_every) != ((total_count - data.numel()) // eval_every):
+        pdb.set_trace() 
         if total_count % eval_every < data.numel():
             eval_env.transform[2].load_state_dict(env.transform[2].state_dict())
             mc_mean_bias, mc_details = evaluate_mc_bias(
