@@ -38,7 +38,7 @@ LOG_EVERY = 1000
 MLP_SIZE = 256
 TAU = 0.01
 GAMMA = 0.99
-EVAL_EVERY = 1000   # frames
+EVAL_EVERY = 50000   # frames
 EVAL_EPISODES = 50
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 UPDATE_ACTOR_EVERY = 2
@@ -218,7 +218,6 @@ def train(
     pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True) if method=="DDPG" else tqdm(total=TOTAL_FRAMES, desc="Training TD3", dynamic_ncols=True)
     
     for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
-
         replay_buffer.extend(data) # add data to the replay buffer
         # episodic return 
         rs = data["next", "reward"].cpu().numpy().reshape(-1)
@@ -233,12 +232,12 @@ def train(
         max_length = replay_buffer[:]["next", "step_count"].max()
         
         
- 
         if len(replay_buffer) <= INIT_RAND_STEPS: 
             pbar.update(data.numel())
             continue
         for _ in range(OPTIM_STEPS):
             td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
+            
             update_step += 1
             
             loss_out = loss(td)
@@ -331,8 +330,8 @@ def train(
     smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
     smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     
-    # save_series("biases_newtd3.csv", biases, smooth_bias, window)
-    # save_series("qvalues_newtd3.csv", qvalues, smooth_qvalue, window)
+    save_series("biasesTD3.csv", biases, smooth_bias, window)
+    save_series("qvaluesTD3.csv", qvalues, smooth_qvalue, window)
 
     # plt.figure(figsize=(12,5))
     # plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
@@ -380,7 +379,7 @@ def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
     actor_eval.eval(); critic_eval.eval()
 
     returns, biases_all = [], []
-    q_vals_all, g_t_all = [], []     # <--- add these
+    q_vals_all, g_t_all = [], []     
     successes = 0
     max_steps = eval_max_steps or getattr(eval_env, "_max_episode_steps", None) or 10_000
 
