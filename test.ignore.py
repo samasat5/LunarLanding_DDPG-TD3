@@ -304,6 +304,7 @@ def train(
         
         pbar.update(data.numel())
         eval_frames, eval_mean, eval_lo, eval_hi = [], [], [], []
+        
         # Evaluation: 
         if frames_since_eval >= EVAL_EVERY:
             eval_env.transform[2].load_state_dict(env.transform[2].state_dict())
