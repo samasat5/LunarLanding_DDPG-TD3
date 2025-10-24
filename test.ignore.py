@@ -303,6 +303,7 @@ def train(
         })
         
         pbar.update(data.numel())
+        # Evaluation: 
         if frames_since_eval >= EVAL_EVERY:
             eval_env.transform[2].load_state_dict(env.transform[2].state_dict())
             
