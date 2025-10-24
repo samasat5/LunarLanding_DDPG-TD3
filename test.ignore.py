@@ -30,7 +30,7 @@ from tqdm import tqdm
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 10_000 
-TOTAL_FRAMES = 200_000
+TOTAL_FRAMES = 100_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -303,22 +303,31 @@ def train(
         })
         
         pbar.update(data.numel())
+        eval_frames, eval_mean, eval_lo, eval_hi = [], [], [], []
         # Evaluation: 
         if frames_since_eval >= EVAL_EVERY:
             eval_env.transform[2].load_state_dict(env.transform[2].state_dict())
             
             returns, biases_all, successes, Q_vals_all, G_t_all = run_eval(
                 method, loss, eval_env, eval_episodes=EVAL_EPISODES, gamma=GAMMA,eval_max_steps=None,)
+            m, lo, hi = eval_summary(returns)
+            eval_frames.append(total_frames_seen)
+            eval_mean.append(m)
+            eval_lo.append(lo)
+            eval_hi.append(hi)
             
             window = 200  # adjust for smoothing strength
             smooth_bias = np.convolve(biases_all, np.ones(window)/window, mode='valid')
+            smooth_returns = np.convolve(returns, np.ones(window)/window, mode='valid')
             smooth_qvalue = np.convolve(Q_vals_all, np.ones(window)/window, mode='valid')
             
-            save_series("biasesDDPG-2.csv", biases_all, smooth_bias, window)
+            # save_series("biasesDDPG-2Alaki.csv", biases_all, smooth_bias, window)
+            save_series("returnsDDPG-2Alaki.csv", returns, smooth_returns, window)
             # save_series("qvaluesTD3.csv", qvalues, smooth_qvalue, window)
                     
             # # plot_mc_estimate(returns, title="TD3: MC estimate with 95% CI ")
             plot_bias_stats(biases_all, title=" DDPG: MC bias Q - MC G_t ")
+            plot_returns(method, eval_frames, eval_mean, eval_lo, eval_hi)
             print(
                 f"[MC-BIAS] frames={total_frames_seen}  "
                 f"Bias mean={np.mean(biases_all):.4f}  "
@@ -441,8 +450,21 @@ bias_eval, returns_eval = train(
 
 
 
+def plot_returns(method, eval_frames, eval_mean, eval_lo, eval_hi):
+    plt.figure(figsize=(10,4))
+    plt.plot(eval_frames, eval_mean, label=f'{method} mean return')
+    plt.fill_between(eval_frames, eval_lo, eval_hi, alpha=0.2)
+    plt.xlabel('Environment frames')
+    plt.ylabel('Episode return')
+    plt.title(f'{method} evaluation')
+    plt.legend(); plt.tight_layout(); plt.show()
 
 
 
-
+def eval_summary(returns):
+    r = np.asarray(returns, float)
+    mean = r.mean()
+    se   = r.std(ddof=1) / np.sqrt(len(r))
+    ci95 = 1.96 * se
+    return mean, mean - ci95, mean + ci95
 
