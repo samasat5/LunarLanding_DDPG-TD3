@@ -30,7 +30,7 @@ from tqdm import tqdm
 
 # parameters and hyperparameters
 INIT_RAND_STEPS = 10_000 
-TOTAL_FRAMES = 100_000
+TOTAL_FRAMES = 20_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -39,7 +39,7 @@ LOG_EVERY = 1000
 MLP_SIZE = 256
 TAU = 0.01
 GAMMA = 0.99
-EVAL_EVERY = 100000   # frames
+EVAL_EVERY = 10000   # frames
 EVAL_EPISODES = 3
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 UPDATE_ACTOR_EVERY = 2
@@ -324,6 +324,7 @@ def train(
             
             # save_series("biasesDDPG-2Alaki.csv", biases_all, smooth_bias, window)
             save_series("returnsDDPG-2Alaki.csv", returns, smooth_returns, window)
+            pdb.set_trace()
             # save_series("qvaluesTD3.csv", qvalues, smooth_qvalue, window)
                     
             # # plot_mc_estimate(returns, title="TD3: MC estimate with 95% CI ")
