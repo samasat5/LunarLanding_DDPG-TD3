@@ -19,6 +19,7 @@ from torchrl.envs import GymEnv, TransformedEnv, Compose, DoubleToFloat, InitTra
 from torchrl.envs.utils import check_env_specs
 from utils2 import MultiCriticSoftUpdate, soft_update, plot_q_vs_mc, plot_bias_stats, plot_mc_estimate  
 from tqdm import tqdm
+# from torchrl.envs.utils import rollout
 
 
 
@@ -28,8 +29,8 @@ from tqdm import tqdm
 
 
 # parameters and hyperparameters
-INIT_RAND_STEPS = 5000 
-TOTAL_FRAMES = 100_000
+INIT_RAND_STEPS = 10_000 
+TOTAL_FRAMES = 200_000
 FRAMES_PER_BATCH = 100
 OPTIM_STEPS = 10
 BUFFER_LEN = 1_000_000
@@ -38,8 +39,8 @@ LOG_EVERY = 1000
 MLP_SIZE = 256
 TAU = 0.01
 GAMMA = 0.99
-EVAL_EVERY = 50000   # frames
-EVAL_EPISODES = 50
+EVAL_EVERY = 5000   # frames
+EVAL_EPISODES = 10
 DEVICE = "cpu" #"cuda:0" if torch.cuda.is_available() else "cpu"
 UPDATE_ACTOR_EVERY = 2
 # Seed the Python and RL environments to replicate similar results across training sessions. 
@@ -154,7 +155,7 @@ replay_buffer = ReplayBuffer(
 )
 
 # 6. Collector
-collector = SyncDataCollector( # renvoie des batches de transitions prêts à mettre dans le rb
+collector_env = SyncDataCollector( # renvoie des batches de transitions prêts à mettre dans le rb
     env,
     rollout_policy,
     frames_per_batch=FRAMES_PER_BATCH,
@@ -170,6 +171,11 @@ collector = SyncDataCollector( # renvoie des batches de transitions prêts à me
 # optim_critic = optim.Adam(critic.parameters(), lr=3e-3, weight_decay=0)
 optim_actor = Adam(loss_td3.actor_network_params.parameters(),  lr=3e-4)
 optim_critic = Adam(loss_td3.qvalue_network_params.parameters(), lr=3e-4)
+
+torch.manual_seed(0)
+np.random.seed(0)
+env.set_seed(0)
+eval_env.set_seed(0)
 
 
 def train(
@@ -188,7 +194,7 @@ def train(
     batch_size=REPLAY_BUFFER_SAMPLE,
 ):
     
-    
+    returns_eval, bias_eval = [], []
     updater = SoftUpdate(loss, tau=TAU)
     loss.make_value_estimator(gamma=GAMMA)
     total_count = 0
@@ -214,7 +220,7 @@ def train(
     else:
         optim_critic = Adam(loss.value_network_params.values(True, True), lr=2e-4)
         
-    
+    eval_frames, eval_mean, eval_lo, eval_hi = [], [], [], []
     pbar = tqdm(total=TOTAL_FRAMES, desc="Training DDPG", dynamic_ncols=True) if method=="DDPG" else tqdm(total=TOTAL_FRAMES, desc="Training TD3", dynamic_ncols=True)
     
     for i, data in enumerate(collector): # runs through the data collected from the agent’s interactions with the environment
@@ -237,7 +243,7 @@ def train(
             continue
         for _ in range(OPTIM_STEPS):
             td = replay_buffer.sample(REPLAY_BUFFER_SAMPLE)
-            
+    
             update_step += 1
             
             loss_out = loss(td)
@@ -275,29 +281,15 @@ def train(
 
                     # === Soft update targets only when actor is updated ===
                     updater.step()
-            
-        
-            # Record TD bias
-            if method == "DDPG":
-                pred_q = loss_out["pred_value"]
-                target_q = loss_out["target_value"]
-                bias_batch = (pred_q - target_q).detach().mean().item()
-            else:
-                pred_q1, pred_q2 = loss_out["pred_value"] 
-                target_q = loss_out["target_value"]
-                bias_q1 = (pred_q1 - target_q).mean().item()
-                bias_q2 = (pred_q2 - target_q).mean().item()
-                bias_batch = min(bias_q1, bias_q2)
-            
-            biases.append(bias_batch)
 
-            batch_frames = data.numel()                
-            total_frames_seen += batch_frames
-            frames_since_eval += batch_frames
-            total_episodes += data["next", "done"].sum()
+
+        batch_frames = data.numel()                
+        total_frames_seen += batch_frames
+        frames_since_eval += batch_frames
+        total_episodes += data["next", "done"].sum()
             
             
-            qvalues.append(loss_out["pred_value"].mean().item()) 
+     
             
 
         rewards.append((i,td["next", "reward"].mean().item(),))
@@ -314,62 +306,83 @@ def train(
         })
         
         pbar.update(data.numel())
+       
         
+        # Evaluation: 
+        # 
+        if frames_since_eval >= EVAL_EVERY :
+            eval_env.transform[2].load_state_dict(env.transform[2].state_dict())
             
-        returns, successes = [], 0
-        eval_max_steps = eval_env._max_episode_steps
+            returns, biases_all, successes, Q_vals_all, G_t_all = run_eval(
+                method, loss, eval_env, eval_episodes=EVAL_EPISODES, gamma=GAMMA,eval_max_steps=None,)
+            
+            m, lo, hi = eval_summary(returns)
+            eval_frames.append(total_frames_seen)
+            eval_mean.append(m)
+            eval_lo.append(lo)
+            eval_hi.append(hi)
         
-        
+            window = 200  # adjust for smoothing strength
+            smooth_bias = np.convolve(biases_all, np.ones(window)/window, mode='valid')
+            # smooth_returns = np.convolve(returns, np.ones(window)/window, mode='valid')
+            smooth_qvalue = np.convolve(Q_vals_all, np.ones(window)/window, mode='valid')
+            
+            
+            # save_series("biasesDDPG-2Alaki.csv", biases_all, smooth_bias, window)
+            # save_series("qvaluesTD3.csv", qvalues, smooth_qvalue, window)
+                    
+            # # plot_mc_estimate(returns, title="TD3: MC estimate with 95% CI ")
+            
+            # plot_bias_stats(biases_all, title=" DDPG: MC bias Q - MC G_t ") # to see the mc bias 
+            
+            print(
+                f"[MC-BIAS] frames={total_frames_seen}  "
+                f"Bias mean={np.mean(biases_all):.4f}  "
+                f"Returns mean={np.mean(returns):.4f}  "
+                f"|Q| mean={np.mean(np.abs(Q_vals_all)):.4f}  "
+                f"Q std={np.std(Q_vals_all):.4f}"
+            )
+            frames_since_eval = 0
+                        
+
+    results = np.column_stack([eval_frames, eval_mean, eval_lo, eval_hi])
+    np.savetxt(
+        f"{method}_retruns_eval_results.csv", 
+        results, 
+        delimiter=",",
+        header="frames,mean_return,ci_lower,ci_upper",
+        comments="")
+    print(f"[INFO] Saved evaluation results to {method}_eval_results.csv")
+    
+    plot_returns(method, eval_frames, eval_mean, eval_lo, eval_hi)
     pbar.close()
     t1 = time.time()    
     print(f"Training took {t1-t0:.2f}s")
     torchrl_logger.info(
         f"solved after {total_count} steps, {total_episodes} episodes and in {t1-t0}s."
     )
-    window = 200  # adjust for smoothing strength
-    smooth_bias = np.convolve(biases, np.ones(window)/window, mode='valid')
-    smooth_qvalue = np.convolve(qvalues, np.ones(window)/window, mode='valid')
     
-    save_series("biasesTD3.csv", biases, smooth_bias, window)
-    save_series("qvaluesTD3.csv", qvalues, smooth_qvalue, window)
-
-    # plt.figure(figsize=(12,5))
-    # plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
-    # plt.title(f"Training {method} - smoothed Q Values")
-    # plt.xlabel("Training Steps")
-    # plt.show()
-    
-    # smooth_returns = np.convolve(episode_returns, np.ones(window)/window, mode='valid')
-    # plt.figure(figsize=(12,4))
-    # plt.plot(episode_returns, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    # # plt.plot(np.arange(window-1, len(episode_returns)), smooth_returns, label="Smoothed Return", color='tab:blue', linewidth=2)
-    # plt.title(f"{method} – episodic return")
-    # plt.xlabel("Episode")
-    # plt.ylabel("Return")
-    # plt.tight_layout()
-    # plt.show()
-    
-    
-    # plt.figure(figsize=(12,5))
-    
-    # plt.plot(biases, label="Raw Bias", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(biases)), smooth_bias, label="Smoothed Bias", color='tab:blue', linewidth=2)
-    # plt.title(f"Training {method} - TD Bias")
-    # plt.title(f"Training {method} - Bias")
-    # plt.xlabel("Training Steps")
-    # plt.show()
-
-    # plt.figure(figsize=(12,5))
-
-    # plt.plot(qvalues, label="Raw q_values", color='tab:blue', alpha=0.5)  # transparent fluctuating curve
-    # plt.plot(np.arange(window-1, len(qvalues)), smooth_qvalue, label="Smoothed q_values", color='tab:blue', linewidth=2)
-    # plt.title(f"Training {method} - smoothed Q Values")
-    # plt.xlabel("Training Steps")
-    # plt.show()
+    return bias_eval,  returns_eval
 
 
 
+def plot_returns(method, eval_frames, eval_mean, eval_lo, eval_hi):
+    plt.figure(figsize=(10,4))
+    plt.plot(eval_frames, eval_mean, label=f'{method} mean return')
+    plt.fill_between(eval_frames, eval_lo, eval_hi, alpha=0.2)
+    plt.xlabel('Environment frames')
+    plt.ylabel('Episode return')
+    plt.title(f'{method} evaluation')
+    plt.legend(); plt.tight_layout(); plt.show()
+
+
+
+def eval_summary(returns):
+    r = np.asarray(returns, float)
+    mean = r.mean()
+    se   = r.std(ddof=1) / np.sqrt(len(r))
+    ci95 = 1.96 * se
+    return mean, mean - ci95, mean + ci95
 
 
 @torch.no_grad()
@@ -382,7 +395,8 @@ def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
     q_vals_all, g_t_all = [], []     
     successes = 0
     max_steps = eval_max_steps or getattr(eval_env, "_max_episode_steps", None) or 10_000
-
+    
+    pbar = tqdm(total=eval_episodes, desc=f"Evaluating {method}", dynamic_ncols=True)
     for _ in range(eval_episodes):
         td = eval_env.reset()
         traj_q, traj_r = [], []
@@ -427,23 +441,24 @@ def run_eval(method, loss, eval_env, eval_episodes, gamma, eval_max_steps):
             G_t.append(acc)
         G_t.reverse()
 
-        biases_all.extend([q - g for q, g in zip(traj_q, G_t)])
-        q_vals_all.extend(traj_q)     # <--- collect
-        g_t_all.extend(G_t)           # <--- collect
-
+        biases_all.extend([q - g for q, g in zip(traj_q, G_t)]) # bias = Q - G_t
+        q_vals_all.extend(traj_q)     # Q values
+        g_t_all.extend(G_t)          # MC returns G_t
+        pbar.set_postfix({"mean_return": np.mean(returns)})
+        pbar.update(1)
+    pbar.close()
     return returns, biases_all, successes, np.array(q_vals_all, dtype=float), np.array(g_t_all, dtype=float)
 
 
 
 
-
-train(
-    method="TD3",
-    loss=loss_td3,
+bias_eval, returns_eval = train(
+    method="DDPG",
+    loss=loss_ddpg,
     optim_critic=optim_critic,
     optim_actor=optim_actor,
     replay_buffer=replay_buffer,
-    collector=collector,
+    collector=collector_env,
     total_frames=TOTAL_FRAMES,
     eval_env=eval_env,
     eval_episodes=EVAL_EPISODES,
@@ -452,21 +467,22 @@ train(
     opt_steps=OPTIM_STEPS,
     batch_size=REPLAY_BUFFER_SAMPLE,
 )
+# # save the results into csv files:
+# save_series("ddpg_returns.csv", np.concatenate(returns_eval), 
+#             np.convolve(np.concatenate(returns_eval), np.ones(10)/10, mode='valid'), window=10)
+# save_series("ddpg_biases.csv", np.concatenate(bias_eval), 
+#             np.convolve(np.concatenate(bias_eval), np.ones(10)/10, mode='valid'), window=10)
 
-rets, biases, succ, q_vals, g_t  = run_eval(
-    method="TD3",
-    loss=loss_td3,
-    eval_env=eval_env,
-    eval_episodes=EVAL_EPISODES,
-    gamma=GAMMA,
-    eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
-)
-plot_mc_estimate(rets, title="TD3: MC estimate with 95% CI ")
-plot_bias_stats(biases, title=" TD3: MC bias Q - MC G_t ")
-
-
-
-
+# rets, biases, succ, q_vals, g_t  = run_eval(
+#     method="TD3",
+#     loss=loss_td3,
+#     eval_env=eval_env,
+#     eval_episodes=EVAL_EPISODES,
+#     gamma=GAMMA,
+#     eval_max_steps=getattr(eval_env, "_max_episode_steps", None),
+# )
+# plot_mc_estimate(rets, title="TD3: MC estimate with 95% CI ")
+# plot_bias_stats(biases, title=" TD3: MC bias Q - MC G_t ")
 
 
 
