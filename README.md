@@ -10,7 +10,7 @@ Additionally, a parallel implementation using **Stable Baselines3** was explored
 
 ---
 
-## 📘 Overview
+## Overview
 
 Both algorithms are based on the same general architecture:
 - **Actor (policy):** a deterministic neural network mapping observations to actions.
@@ -73,7 +73,7 @@ For the training and evaluation please run :
 
 ```bash
 python TD3_DDPG_TRL.py --method DDPG
-
+```
 
 
 
