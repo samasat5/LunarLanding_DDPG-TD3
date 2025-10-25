@@ -4,8 +4,8 @@ For the Stable Baseline 3 implementation : Stable Baseline 3/ddpg_sb3.py, Stable
 # DDPG vs. TD3
 
 This project implements and compares **DDPG** and **TD3**  both trained on the LunarLanderContinuous-v3 environment using **TorchRL**.
-Additionally, a parallel implementation using **Stable Baselines3** was explored to compare results.  
-(However full experimental results from SB3 implementation are not yet included.)
+Additionally, a parallel implementation using **Stable Baselines3** was explored too.  
+
 
 
 ---
