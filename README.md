@@ -1,6 +1,8 @@
 For the TorchRL implementation : TD3_DDPG_TRL.py, utils2.py
 For the Stable Baseline 3 implementation : Stable Baseline 3/ddpg_sb3.py, Stable Baseline 3/td3_sb3.py
 
+---
+
 # DDPG vs. TD3
 
 This project implements and compares **DDPG** and **TD3**  both trained on the LunarLanderContinuous-v3 environment using **TorchRL**.
