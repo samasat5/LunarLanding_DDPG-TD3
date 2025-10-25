@@ -10,16 +10,8 @@ Additionally, a parallel implementation using **Stable Baselines3** was explored
 
 ---
 
-## Overview
 
-Both algorithms are based on the same general architecture:
-- **Actor (policy):** a deterministic neural network mapping observations to actions.
-- **Critic (value):** a neural network estimating the action-value function \( Q(s, a) \).
-- **Replay buffer:** stores transitions for off-policy learning.
-- **OU Noise:** used during rollout for exploration.
----
-
-## ⚙️ Training Setup
+## Training Setup
 
 | Hyperparameter | Value |
 |----------------|--------|
@@ -53,10 +45,8 @@ The shaded region represents the **95% confidence interval** (CI) over evaluatio
 ### 2. **Bias Plot (Q - Monte Carlo Return)**
 
 The **bias plot** measures the average difference between:
-\[
-\text{Bias} = Q(s, a) - G_t
-\]
-where \( G_t \) is the Monte Carlo return computed from rollouts.
+**Bias** = Q(s, a) − Gₜ
+where Gₜ is the Monte Carlo return computed from rollouts.
 
 **Example:**
 <p align="center">
