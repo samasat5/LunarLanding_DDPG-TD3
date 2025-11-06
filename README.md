@@ -27,7 +27,8 @@ Additionally, a parallel implementation using **Stable Baselines3** was explored
 | Target update rate (τ) | 0.01 |
 | Evaluation frequency | Every 10,000 frames |
 | Evaluation episodes | 10 |
-
+| train envrironment seed | 0 |
+| evaluate environment seed | 4 |
 ---
 
 ## Evaluation Metrics
